@@ -11,7 +11,7 @@
 | Load tests (k6) | `tests/performance` | a synced node | manual |
 
 ```bash
-pip install '.[dev]'
+pip install -e '.[dev]'
 export PIXAMIND_TEST_ADMIN_DSN=postgresql://postgres:postgres@localhost:5432/postgres
 pytest tests/utils tests/pixamind
 ```

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 import threading
@@ -81,8 +82,11 @@ def test_cli_help_version_and_unknown(capsys):
     assert cli.main(['frobnicate']) == 2
 
 
-def test_console_script_runs():
-    out = subprocess.run([sys.executable, '-m', 'pixamind.cli', '--version'], capture_output=True, text=True, cwd=REPO)
+def test_console_script_runs(tmp_path):
+    script = shutil.which('pixamind') or str(Path(sys.executable).with_name('pixamind'))
+    if not Path(script).exists():
+        pytest.skip('pixamind is not installed in this environment')
+    out = subprocess.run([script, '--version'], capture_output=True, text=True, cwd=tmp_path)
     assert out.returncode == 0 and out.stdout.startswith('pixamind ')
 
 

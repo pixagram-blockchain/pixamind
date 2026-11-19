@@ -38,7 +38,7 @@ application names `hivemind_*` (the sync loop checks them).
 ## Commands
 
 ```bash
-python3 -m venv venv && . venv/bin/activate && pip install '.[dev]'
+python3 -m venv venv && . venv/bin/activate && pip install -e '.[dev]'
 
 # tests: unit + SQL harness + end-to-end (needs any PostgreSQL 14+, superuser DSN)
 export PIXAMIND_TEST_ADMIN_DSN=postgresql://postgres:postgres@localhost:5432/postgres

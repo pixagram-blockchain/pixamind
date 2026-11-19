@@ -115,7 +115,7 @@ pixamind sync-report  where indexing time goes, from an indexer log
 
 ```bash
 python3 -m venv venv && . venv/bin/activate
-pip install '.[dev]'
+pip install -e '.[dev]'
 export PIXAMIND_TEST_ADMIN_DSN=postgresql://postgres:postgres@localhost:5432/postgres
 pytest tests/utils tests/pixamind        # unit, SQL harness and end-to-end sync tests
 ruff check pixamind tests/pixamind && ruff format pixamind tests/pixamind
