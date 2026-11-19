@@ -9,7 +9,7 @@ requires = [
 
 [tool.versioningit.vcs]
 method = "git"
-match = ["v*", "[0-9]*"]
+match = ["v*"]  # Pixamind release tags only: upstream Hivemind tags (1.28.x) arrive with upstream merges
 default-tag = "0.1.0"
 
 [tool.versioningit.tag2version]
