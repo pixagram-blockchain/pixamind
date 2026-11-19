@@ -35,7 +35,9 @@ BEGIN
   __params = __request_data->'params';
   IF __method NOT IN ('call', 'hive.db_head_state', 'condenser.get_trending_tags',
                       'bridge.list_pop_communities', 'bridge.get_payout_stats',
-                      'bridge.get_trending_topics','bridge.list_muted_reasons_enum'
+                      'bridge.get_trending_topics','bridge.list_muted_reasons_enum',
+                      'pixamind_api.get_info', 'pixamind_api.get_metrics', 'pixamind_api.get_events',
+                      'pixamind_feed.get_promoted_posts'
                      ) THEN
     IF __params is NULL THEN
       RETURN json_build_object('id', __id, 'jsonrpc', '2.0', 'error', 'this method requires parameters');

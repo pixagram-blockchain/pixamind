@@ -53,6 +53,9 @@ BEGIN
       result :=  hivemind_endpoints.condenser_api_get_discussions_by(__params, 'payout'::hivemind_postgrest_utilities.ranked_post_sort_type);
     WHEN __method_type = 'get_comment_discussions_by_payout' THEN
       result :=  hivemind_endpoints.condenser_api_get_discussions_by(__params, 'payout_comments'::hivemind_postgrest_utilities.ranked_post_sort_type);
+    WHEN __method_type = 'get_discussions_by_promoted' THEN
+      -- Pixamind: paid post promotion (pixamind/sql/runtime/50_promotions.sql)
+      result := pixamind.condenser_get_discussions_by_promoted(__params);
     WHEN __method_type = 'get_account_votes' THEN
       RAISE EXCEPTION '%', hivemind_postgrest_utilities.raise_parameter_validation_exception('get_account_votes is no longer supported, for details see https://hive.blog/steemit/@steemitdev/additional-public-api-change');
     ELSE
@@ -197,6 +200,9 @@ BEGIN
       result :=  hivemind_endpoints.condenser_api_get_discussions_by(__params, 'payout'::hivemind_postgrest_utilities.ranked_post_sort_type);
     WHEN __method_type = 'get_comment_discussions_by_payout' THEN
       result :=  hivemind_endpoints.condenser_api_get_discussions_by(__params, 'payout_comments'::hivemind_postgrest_utilities.ranked_post_sort_type);
+    WHEN __method_type = 'get_discussions_by_promoted' THEN
+      -- Pixamind: paid post promotion (pixamind/sql/runtime/50_promotions.sql)
+      result := pixamind.condenser_get_discussions_by_promoted(__params);
     WHEN __method_type = 'get_account_votes' THEN
       RAISE EXCEPTION '%', hivemind_postgrest_utilities.raise_parameter_validation_exception('get_account_votes is no longer supported, for details see https://hive.blog/steemit/@steemitdev/additional-public-api-change');
     ELSE

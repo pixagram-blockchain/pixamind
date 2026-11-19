@@ -31,6 +31,7 @@ from hive.utils.stats import OPStatusManager as OPSM
 from hive.utils.stats import PrometheusClient as PC
 from hive.utils.stats import WaitingStatusManager as WSM
 from hive.utils.timer import Timer
+from pixamind.indexer.hooks import PixamindHooks
 
 log = logging.getLogger(__name__)
 
@@ -95,6 +96,7 @@ class SyncHiveDb:
 
         if self._enter_sync:
             Accounts.load_ids()  # prefetch id->name and id->rank memory maps
+            PixamindHooks.configure(self._conf, self._db)
 
         return self
 

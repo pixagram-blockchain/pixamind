@@ -154,6 +154,13 @@ class DbState:
                 schema_module.pg_search_available = True
                 log.info("pg_search extension detected in existing database")
 
+        # Pixamind schema on databases installed before it existed. Creating a schema
+        # needs the admin role the setup step runs with; during `sync` this is a no-op
+        # once the schema exists (see pixamind/db/install.py).
+        from pixamind.db.install import ensure_schema as ensure_pixamind_schema
+
+        ensure_pixamind_schema(cls.db(), SCHEMA_OWNER_NAME)
+
         db_setup_owner.query_no_return(f"SET SEARCH_PATH TO {REPTRACKER_SCHEMA_NAME}")
         db_setup_owner.query_no_return(f"SET custom.swagger_url = '{SWAGGER_URL}'")
         setup_runtime_code(db=db_setup_owner)

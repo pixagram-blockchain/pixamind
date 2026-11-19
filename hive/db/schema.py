@@ -88,6 +88,7 @@ def setup(db, admin_db):
     admin_db.query(f'CREATE SCHEMA IF NOT EXISTS {SCHEMA_NAME} AUTHORIZATION {SCHEMA_OWNER_NAME};')
     admin_db.query(f'CREATE SCHEMA IF NOT EXISTS hivemind_endpoints AUTHORIZATION {SCHEMA_OWNER_NAME};')
     admin_db.query(f'CREATE SCHEMA IF NOT EXISTS hivemind_postgrest_utilities AUTHORIZATION {SCHEMA_OWNER_NAME};')
+    admin_db.query(f'CREATE SCHEMA IF NOT EXISTS pixamind AUTHORIZATION {SCHEMA_OWNER_NAME};')
 
     # Create extensions before table creation (needed for BM25 index type)
     # Create ParadeDB pg_search extension for BM25 search (optional)
@@ -411,6 +412,12 @@ def setup_runtime_code(db):
     # (massive_sync.sql above) for the completed-block function (haf#341)
     from hive.indexer.hive_db.haf_functions import register_application
     register_application(db)
+
+    # Pixamind schema: versioned migrations + runtime SQL (pixamind/sql). Fail-safe:
+    # a problem there disables Pixamind features, never the social indexer.
+    from pixamind.db.install import install as install_pixamind
+
+    install_pixamind(db, SCHEMA_OWNER_NAME)
 
 
 def perform_db_upgrade(db, admin_db):

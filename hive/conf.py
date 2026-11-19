@@ -183,6 +183,11 @@ class Conf:
             default='{hivemind-host}',
         )
 
+        # Pixamind options (--pixamind-*), see pixamind/conf.py
+        from pixamind.conf import add_arguments as add_pixamind_arguments
+
+        add_pixamind_arguments(add)
+
         # needed for e.g. tests - other args may be present
         args = parser.parse_args() if strict else parser.parse_known_args()[0]
 

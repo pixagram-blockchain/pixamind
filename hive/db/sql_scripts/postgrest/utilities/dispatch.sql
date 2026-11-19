@@ -26,6 +26,9 @@ BEGIN
         result := hivemind_postgrest_utilities.get_search_api_method(__method_type, __params);
     WHEN __api_type = 'hive' THEN
       result := hivemind_postgrest_utilities.get_hive_api_method(__method_type, __params);
+    -- Pixamind namespaces (pixamind/sql/runtime/80_api.sql)
+    WHEN __api_type IN ('pixamind_api', 'pixamind_content', 'pixamind_graph', 'pixamind_feed') THEN
+      result := pixamind.dispatch(__api_type, __method_type, __params);
     ELSE
       RAISE EXCEPTION '%', hivemind_postgrest_utilities.raise_api_not_found_exception(__api_type);
   END CASE;

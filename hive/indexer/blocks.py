@@ -30,6 +30,7 @@ from hive.utils.communities_rank import update_communities_posts_and_rank
 from hive.utils.payout_stats import PayoutStats
 from hive.utils.stats import OPStatusManager as OPSM
 from hive.utils.timer import time_it
+from pixamind.indexer.hooks import PixamindHooks
 
 log = logging.getLogger(__name__)
 
@@ -350,6 +351,11 @@ class Blocks:
         DbState.run_boundary_vacuums()
         phase_times['vacuum'] = perf_counter() - t0
 
+        # Phase 8: Pixamind projections (promotions, event outbox) and telemetry, in
+        # their own transaction while the staging table still holds this batch.
+        # Never raises: a Pixamind problem is recorded, the batch completes.
+        phase_times['pixamind'] = PixamindHooks.after_massive_batch(db, first_block, last_block, dict(phase_times))
+
         total = sum(phase_times.values())
         log.info(
             "[PHASE-SUMMARY] blocks=%d-%d total=%.3fs %s",
@@ -433,6 +439,10 @@ class Blocks:
         log.info("[PROCESS LIVE SQL] Tables updating in live synchronization")
         cls.on_live_blocks_processed(first_block, last_block)
         cls._periodic_actions_by_num(last_block)
+
+        # Pixamind projections and telemetry, in this block's transaction (under a
+        # savepoint: a Pixamind error can never abort the block).
+        PixamindHooks.after_live_block(db, first_block, last_block, perf_counter() - time_start)
 
         # Commit the entire block atomically
         db.query_no_return("COMMIT")
