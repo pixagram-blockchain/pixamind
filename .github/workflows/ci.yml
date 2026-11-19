@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'ruff>=0.6.5'
+      - name: Ruff (Pixamind code and tests)
+        run: |
+          ruff check pixamind tests/pixamind tests/utils
+          ruff format --check pixamind tests/pixamind
+      - name: Shell syntax
+        run: for f in docker/*.sh scripts/*.sh scripts/ci/*.sh; do bash -n "$f"; done
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.12 is the declared minimum; 3.14 is what the Docker image runs
+        python-version: ['3.12', '3.14']
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      # The SQL tests install the real hivemind + Pixamind SQL on this server,
+      # with HAF replaced by tests/pixamind/sql/haf_stub.sql.
+      PIXAMIND_TEST_ADMIN_DSN: postgresql://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the version is derived from git (versioningit)
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Build dependencies (cffi has no wheel for every Python)
+        run: sudo apt-get update && sudo apt-get install -y libffi-dev
+      - run: pip install '.[dev]'
+      - name: Unit, SQL and end-to-end tests
+        run: pytest tests/utils tests/pixamind -q

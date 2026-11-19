@@ -17,8 +17,11 @@ def test_valid_account():
     account = {'name': 'foo', 'posting_json_metadata': json.dumps(dict(profile=raw_profile))}
 
     safe_profile = safe_profile_metadata(account)
-    for key, safe_value in safe_profile.items():
-        assert raw_profile[key] == safe_value
+    # safe_profile_metadata() also returns fields the raw profile does not set
+    # (blacklist_description, muted_list_description, ...): compare the ones it does.
+    for key, raw_value in raw_profile.items():
+        if key in safe_profile:
+            assert safe_profile[key] == raw_value
 
 
 def test_invalid_account():
