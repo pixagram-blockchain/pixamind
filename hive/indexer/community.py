@@ -13,6 +13,7 @@ from hive.conf import SCHEMA_NAME
 from hive.indexer.accounts import Accounts
 from hive.indexer.db_adapter_holder import DbAdapterHolder
 from hive.indexer.notify import Notify
+from hive.utils.chain import DEFAULT_COMMUNITY_START_BLOCK
 from hive.utils.misc import UniqueCounter
 from hive.utils.stats import FlushStatusManager as FSM
 
@@ -163,7 +164,7 @@ class Community:
 
     _counter = UniqueCounter()
 
-    start_block = 37500000
+    start_block = DEFAULT_COMMUNITY_START_BLOCK  # overridden by --community-start-block
 
     @classmethod
     def register(cls, name, block_date, block_num):

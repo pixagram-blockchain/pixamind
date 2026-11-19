@@ -371,7 +371,10 @@ BEGIN
             0 AS vote_percent,
             '1970-01-01'::TIMESTAMP AS last_update,
             (s.val->>'weight')::NUMERIC AS weight,
-            CASE WHEN s.block_num < 905693
+            -- Steem HF1 (block 905693) rescaled rshares by 10^6. The bound comes from
+            -- hive/utils/chain.py: 905693 on Hive (PIXAMIND_CHAIN=hive), 0 on Pixa,
+            -- whose own first month would otherwise be inflated a millionfold.
+            CASE WHEN s.block_num < {{LEGACY_RSHARES_UPSCALE_BEFORE_BLOCK}}
                 THEN (s.val->>'rshares')::BIGINT * 1000000
                 ELSE (s.val->>'rshares')::BIGINT
             END AS rshares,
@@ -900,10 +903,12 @@ BEGIN
     _raw := (_amount->>'amount')::BIGINT;
     _precision := COALESCE((_amount->>'precision')::INT, 3);
     _nai := _amount->>'nai';
+    -- Chain symbols are templated (PIXA/PXS on Pixa): hardcoded HIVE/HBD made
+    -- bridge/condenser return e.g. max_accepted_payout "1000000.000 HBD" on Pixa.
     _asset := CASE _nai
-        WHEN '@@000000021' THEN 'HIVE'
-        WHEN '@@000000013' THEN 'HBD'
-        WHEN '@@000000037' THEN 'VESTS'
+        WHEN '@@000000021' THEN '{{HIVE_SYMBOL}}'
+        WHEN '@@000000013' THEN '{{HBD_SYMBOL}}'
+        WHEN '@@000000037' THEN '{{VESTS_SYMBOL}}'
         ELSE 'UNKNOWN'
     END;
     _val := _raw::NUMERIC / (10::NUMERIC ^ _precision);

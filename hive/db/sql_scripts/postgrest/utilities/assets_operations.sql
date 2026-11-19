@@ -90,8 +90,9 @@ LANGUAGE sql
 IMMUTABLE
 AS
 $BODY$
-  -- Pixagram pays 40% of the content reward pool to curators (percent_curation_rewards since HF21).
-  SELECT 4000::NUMERIC;
+  -- Share of the content reward pool paid to curators, in basis points. Pixa pays
+  -- 40% (4000); Hive 50% since HF21. Set from hive/utils/chain.py (PIXAMIND_CHAIN).
+  SELECT {{CURATION_REWARDS_PERCENT}}::NUMERIC;
 $BODY$;
 
 DROP FUNCTION IF EXISTS hivemind_postgrest_utilities.floor_asset_amount;

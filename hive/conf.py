@@ -7,6 +7,7 @@ from typing import Final
 import configargparse
 
 from hive.db.adapter import Db
+from hive.utils.chain import DEFAULT_COMMUNITY_START_BLOCK
 from hive.utils.normalize import int_log_level, strtobool
 
 log = logging.getLogger(__name__)
@@ -131,7 +132,13 @@ class Conf:
             env_var='MOCK_VOPS_DATA_PATH',
             help='(debug/testing) load additional data from virtual operations data file',
         )
-        add('--community-start-block', type=int, env_var='COMMUNITY_START_BLOCK', default=37500000)
+        add(
+            '--community-start-block',
+            type=int,
+            env_var='COMMUNITY_START_BLOCK',
+            default=DEFAULT_COMMUNITY_START_BLOCK,
+            help='first block where communities are processed (default: 1 on Pixa, 37500000 with PIXAMIND_CHAIN=hive)',
+        )
         add(
             '--log_explain_queries',
             type=strtobool,
