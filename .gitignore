@@ -159,3 +159,6 @@ tavern_benchmarks_report.html
 
 # local agent notes
 notes/
+
+# test artefact of tests/utils/test_utils_profiler.py
+.tmp.test-prof

@@ -1,5 +1,7 @@
 # syntax=docker/dockerfile:1.7-labs
-# Base docker file having defined environment for build and run of a Hivemind instance.
+# Pixamind image: the indexer (`sync`) and the PostgREST API server (`server`) of
+# the Pixa social layer. Built like the Hivemind image it derives from; the unix
+# user, paths and database roles keep their hivemind names for compatibility.
 # Use scripts/ci/build_ci_base_image.sh to build a new version of the CI base image. It must be properly tagged and pushed to the container registry.
 
 ARG POSTGREST_VERSION=409108966606eba9e8f270c76dfb929cae65dba3
@@ -117,15 +119,15 @@ ARG GIT_LAST_COMMITTER
 ARG GIT_LAST_COMMIT_DATE
 ARG COMMON_CI_REF=develop
 LABEL org.opencontainers.image.created="$BUILD_TIME"
-LABEL org.opencontainers.image.url="https://hive.io/"
-LABEL org.opencontainers.image.documentation="https://github.com/pixagram-blockchain/hivemind"
-LABEL org.opencontainers.image.source="https://github.com/pixagram-blockchain/hivemind"
+LABEL org.opencontainers.image.url="https://pixa.org/"
+LABEL org.opencontainers.image.documentation="https://github.com/pixagram-blockchain/pixamind"
+LABEL org.opencontainers.image.source="https://github.com/pixagram-blockchain/pixamind"
 #LABEL org.opencontainers.image.version="${VERSION}"
 LABEL org.opencontainers.image.revision="$GIT_COMMIT_SHA"
 LABEL org.opencontainers.image.licenses="MIT"
-LABEL org.opencontainers.image.ref.name="Hivemind"
-LABEL org.opencontainers.image.title="Hivemind Image"
-LABEL org.opencontainers.image.description="Runs Hivemind application"
+LABEL org.opencontainers.image.ref.name="Pixamind"
+LABEL org.opencontainers.image.title="Pixamind"
+LABEL org.opencontainers.image.description="Social indexer and JSON-RPC API of the Pixa blockchain (Hivemind fork)"
 LABEL io.hive.image.branch="$GIT_CURRENT_BRANCH"
 LABEL io.hive.image.commit.log_message="$GIT_LAST_LOG_MESSAGE"
 LABEL io.hive.image.commit.author="$GIT_LAST_COMMITTER"

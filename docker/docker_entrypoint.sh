@@ -13,7 +13,7 @@ function log () {
     echo "[Entrypoint] $timestamp INFO  [$category] (main) $message"
 }
 
-log "global" "Parameters passed directly to Hivemind docker entrypoint: '$*'"
+log "global" "Parameters passed directly to Pixamind docker entrypoint: '$*'"
 
 SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 
@@ -79,7 +79,7 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-log "global" "Collected Hivemind arguments: '${HIVEMIND_ARGS[*]}'"
+log "global" "Collected Pixamind arguments: '${HIVEMIND_ARGS[*]}'"
 log "global" "Using PostgreSQL instance: '$POSTGRES_URL'"
 log "global" "Using PostgreSQL Admin URL: '$POSTGRES_ADMIN_URL'"
 
@@ -88,11 +88,11 @@ run_hive_no_exec() {
   # shellcheck source=/dev/null
   source /home/hivemind/.hivemind-venv/bin/activate
   if [[ -n "$LOG_PATH" ]]; then
-    log "run_hive" "Starting Hivemind with log '$LOG_PATH'"
-    hive "${HIVEMIND_ARGS[@]}" --database-url="${db_url}" > >( tee -i "$LOG_PATH" ) 2>&1
+    log "run_hive" "Starting Pixamind with log '$LOG_PATH'"
+    pixamind "${HIVEMIND_ARGS[@]}" --database-url="${db_url}" > >( tee -i "$LOG_PATH" ) 2>&1
   else
-    log "run_hive" "Starting Hivemind..."
-    hive "${HIVEMIND_ARGS[@]}" --database-url="${db_url}"
+    log "run_hive" "Starting Pixamind..."
+    pixamind "${HIVEMIND_ARGS[@]}" --database-url="${db_url}"
   fi
 }
 
@@ -101,11 +101,11 @@ run_hive() {
   # shellcheck source=/dev/null
   source /home/hivemind/.hivemind-venv/bin/activate
   if [[ -n "$LOG_PATH" ]]; then
-    log "run_hive" "Starting Hivemind with log '$LOG_PATH'"
-    exec hive "${HIVEMIND_ARGS[@]}" --reptracker-schema-name="${REPTRACKER_SCHEMA}" --swagger-url="${SWAGGER_URL}" --database-url="${db_url}" > >( tee -i "$LOG_PATH" ) 2>&1
+    log "run_hive" "Starting Pixamind with log '$LOG_PATH'"
+    exec pixamind "${HIVEMIND_ARGS[@]}" --reptracker-schema-name="${REPTRACKER_SCHEMA}" --swagger-url="${SWAGGER_URL}" --database-url="${db_url}" > >( tee -i "$LOG_PATH" ) 2>&1
   else
-    log "run_hive" "Starting Hivemind..."
-    exec hive "${HIVEMIND_ARGS[@]}" --reptracker-schema-name="${REPTRACKER_SCHEMA}" --swagger-url="${SWAGGER_URL}" --database-url="${db_url}"
+    log "run_hive" "Starting Pixamind..."
+    exec pixamind "${HIVEMIND_ARGS[@]}" --reptracker-schema-name="${REPTRACKER_SCHEMA}" --swagger-url="${SWAGGER_URL}" --database-url="${db_url}"
   fi
 }
 
@@ -113,11 +113,11 @@ run_server() {
   local db_url=${POSTGRES_URL}
   # shellcheck source=/dev/null
   if [[ -n "$LOG_PATH" ]]; then
-    log "run_hive" "Starting hivemind postgrest server with log $LOG_PATH"
+    log "run_hive" "Starting Pixamind postgrest server with log $LOG_PATH"
     echo "Running postgrest setup..."
     exec "$SCRIPT_DIR/app/start_postgrest.sh" "${HIVEMIND_ARGS[@]}" --postgres-url="${POSTGRES_URL}" > >( tee -i "$LOG_PATH" ) 2>&1
   else
-    log "run_hive" "Starting hivemind postgrest server..."
+    log "run_hive" "Starting Pixamind postgrest server..."
     echo "Running postgrest setup..."
     exec "$SCRIPT_DIR/app/start_postgrest.sh" "${HIVEMIND_ARGS[@]}" --postgres-url="${POSTGRES_URL}"
   fi
@@ -215,7 +215,7 @@ case "$COMMAND" in
       ;;
     server)
       HIVEMIND_ARGS=("${HIVEMIND_ARGS[@]:1}")
-      log "global" "Running Hivemind with arguments '${HIVEMIND_ARGS[*]}'"
+      log "global" "Running Pixamind with arguments '${HIVEMIND_ARGS[*]}'"
       run_server
       ;;
     *)

@@ -41,6 +41,7 @@ pip3 install .
 
 # verify hivemind signals module loads correctly (uses stdlib threading, no compilation needed)
 python3 -c 'from hive.signals import AtomicCounter'
+python3 -c 'import pixamind.cli, pixamind.indexer.hooks'
 
 python3 -m build --wheel
 

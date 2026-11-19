@@ -10,7 +10,7 @@ requires = [
 [tool.versioningit.vcs]
 method = "git"
 match = ["v*", "[0-9]*"]
-default-tag = "0.0.0"
+default-tag = "0.1.0"
 
 [tool.versioningit.tag2version]
 rmprefix = "v"
@@ -35,7 +35,7 @@ distance-dirty = "{base_version}-{distance}+{vcs}{rev}-dirty.{author_date:%Y%m%d
 
 [tool.ruff]
 line-length = 120
-target-version = "py314"
+target-version = "py312"  # matches python_requires; py314 formatting emits 3.14-only syntax (PEP 758)
 
 [tool.ruff.format]
 quote-style = "preserve"  # Preserves existing quote style
@@ -54,4 +54,4 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["hive"]
+known-first-party = ["hive", "pixamind"]

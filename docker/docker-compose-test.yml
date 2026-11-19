@@ -34,7 +34,7 @@ services:
       start_period: 60s
 
   hivemind-server:
-    image: ${HIVEMIND_IMAGE:-pixadock/hivemind:mainnet}
+    image: ${PIXAMIND_IMAGE:-pixadock/pixamind:mainnet}
     working_dir: /home/hivemind
     entrypoint: ["/bin/bash", "-c"]
     command:
@@ -58,8 +58,10 @@ services:
       HAF_POSTGRES_URL: postgresql://hivemind@haf:5432/haf_block_log
       HIVEMIND_PORT: ${HIVEMIND_PORT:-8080}
       LOG_LEVEL: ${LOG_LEVEL:-info}
-      HIVEMIND_HIVE_SYMBOL: ${HIVEMIND_HIVE_SYMBOL:-HIVE}
-      HIVEMIND_HBD_SYMBOL: ${HIVEMIND_HBD_SYMBOL:-HBD}
+      # the API test suite runs on Hive mainnet data (first 5M blocks + mocks)
+      PIXAMIND_CHAIN: ${PIXAMIND_CHAIN:-hive}
+      PIXAMIND_HIVE_SYMBOL: ${PIXAMIND_HIVE_SYMBOL:-HIVE}
+      PIXAMIND_HBD_SYMBOL: ${PIXAMIND_HBD_SYMBOL:-HBD}
     ports:
       - "${HIVEMIND_PORT:-8080}:${HIVEMIND_PORT:-8080}"
     networks:
