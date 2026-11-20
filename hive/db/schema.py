@@ -159,53 +159,6 @@ def setup(db, admin_db):
     reset_autovac(db)  # tune auto vacuum/analyze
     set_fillfactor(db)
 
-    # Register tables with HFM so the fork manager auto-tracks deltas and
-    # can rewind them on a microfork. Required because the context is now
-    # forking (_is_forking=TRUE in haf_functions.py). app_register_table
-    # adds hive_rowid + change-tracking triggers in one shot.
-    #
-    # 1.28.6 moved schema creation into SQL (create_tables.sql) and dropped
-    # build_metadata(), so the table list is read from the catalog instead.
-    #
-    # Exclusions that matter:
-    #  - the context root table (named after the schema) must be skipped, or
-    #    app_register_table tries to make it inherit from itself and fails with
-    #    "circular inheritance not allowed",
-    #  - hive_db_patch_level must never be registered: registration adds a
-    #    hive_rowid column and the rows are read into a fixed PatchLevelInfo
-    #    dataclass, which then dies on the unexpected keyword,
-    #  - hive_state must never be registered: it is control data (sync
-    #    position, db_version, git revision), not fork-revertible chain data.
-    #    Registering it attaches on_update_hivemind_app_hive_state(), which
-    #    rejects any edit made outside a hive.context_next_block() window --
-    #    and setup_runtime_code() stamps this table with an UPDATE on every
-    #    single startup. That makes the first install succeed (registration
-    #    happens after the stamp) and every later restart fail with
-    #    "Did not execute hive.context_next_block before table edition",
-    #    taking hivemind_sync, hivemind and jussi down with it,
-    #  - tables that already inherit from it are registered, so skipping them
-    #    keeps setup re-runnable.
-    #
-    tables_to_register = db.query_col(
-        f"""SELECT c.relname
-              FROM pg_class c
-              JOIN pg_namespace n ON n.oid = c.relnamespace
-             WHERE n.nspname = '{SCHEMA_NAME}'
-               AND c.relkind = 'r'
-               AND c.relname <> '{SCHEMA_NAME}'
-               AND c.relname NOT IN ('hive_db_patch_level', 'hive_state')
-               AND NOT EXISTS (
-                     SELECT 1 FROM pg_inherits i WHERE i.inhrelid = c.oid
-                   )
-             ORDER BY c.relname"""
-    )
-    log.info(f"Registering {len(tables_to_register)} tables with the fork manager...")
-    for table_name in tables_to_register:
-        db.query_no_return(
-            f"SELECT hive.app_register_table('{SCHEMA_NAME}', '{table_name}', '{SCHEMA_NAME}');"
-        )
-
-
     # default rows
     insert_seed_data(db)
     db.query(f"UPDATE {SCHEMA_NAME}.hive_state SET db_version = 0")

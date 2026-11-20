@@ -28,7 +28,7 @@ CREATE TABLE hafd.contexts (
     current_block_num INT NOT NULL DEFAULT 0,
     irreversible_block INT NOT NULL DEFAULT 0,
     fork_id BIGINT NOT NULL DEFAULT 1,
-    is_forking BOOLEAN NOT NULL DEFAULT TRUE,
+    is_forking BOOLEAN NOT NULL DEFAULT FALSE,  -- Pixamind's context is non-forking
     stage TEXT NOT NULL DEFAULT 'live'
 );
 INSERT INTO hafd.contexts (name, schema) VALUES ('hivemind_app', 'hivemind_app');

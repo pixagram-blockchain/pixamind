@@ -71,9 +71,10 @@ Docker: `docker build -t pixadock/pixamind:local .`; entrypoint commands `setup`
   `pixamind.projection_failures`). Never let them raise into the block processor.
 * Never put surrogate ids (post_id, account id) in event payloads: events must be
   identical on every node.
-* Pixa's HAF context is **forking**: hivemind tables are registered with HAF's fork
-  manager and reject edits outside block processing. `pixamind.*` tables are not
-  registered.
+* The HAF context is **non-forking** (irreversible blocks only), as upstream. Don't
+  register tables with HAF's fork manager: that is for forking contexts and turns off
+  the massive-sync speedups. Databases from the earlier forking build keep registered
+  tables until resynced (`db_state.py` handles them).
 
 ## Testing approach
 
@@ -94,6 +95,7 @@ The inherited tavern API suite runs on Hive mainnet data (5M blocks + mocks) wit
 * Install order: HAF → reputation_tracker → Pixamind (`setup` needs the HAF admin role;
   it also creates the `pixamind` schema).
 * Sync stages: MASSIVE_WITHOUT_INDEXES (> 2M blocks behind), MASSIVE_WITH_INDEXES,
-  LIVE. On Pixa (forking, registered tables) indexes and FKs stay in place during
-  massive sync.
+  LIVE. FKs are dropped during massive sync, indexes in MASSIVE_WITHOUT_INDEXES (plus
+  UNLOGGED tables on an initial sync); none of it on databases whose tables are still
+  registered with the fork manager.
 * PostgREST version is pinned in the Dockerfile (`pixadock/postgrest` mirror).

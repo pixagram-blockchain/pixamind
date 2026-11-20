@@ -171,6 +171,9 @@ def test_get_events_paging_and_filters(synced):
 
 
 def test_get_events_respects_irreversibility(indexer, chain, sql):
+    # Only a forking context processes reversible blocks: databases set up by the
+    # earlier forking build, until `setup` switches them to non-forking.
+    sql.run("UPDATE hafd.contexts SET is_forking = TRUE WHERE name = 'hivemind_app'")
     scenario.load(chain)
     for block in range(1, 6):
         indexer.process_live(block)
@@ -185,6 +188,7 @@ def test_get_events_respects_irreversibility(indexer, chain, sql):
 def test_info_and_metrics(synced):
     info = synced.result('pixamind_api.get_info')
     assert info['chain'] == {'name': 'pixa', 'liquid_symbol': 'PIXA', 'stable_symbol': 'PXS', 'vests_symbol': 'VESTS'}
+    assert info['context']['forking'] is False
     assert info['features']['events'] is True and info['database']['pixamind_migration'] >= 1
     metrics = synced.result('pixamind_api.get_metrics', {'window_minutes': 60})
     assert metrics['throughput']['batches'] == 6 and metrics['throughput']['blocks'] == 6

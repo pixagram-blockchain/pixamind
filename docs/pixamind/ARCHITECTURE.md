@@ -60,8 +60,8 @@ modernization proposal assumed, and where Pixamind's additions sit.
 | Communities are `portal-NNNNNN` accounts (Hive: `hive-NNNNNN`) | community.sql, check_community.sql, community.py | |
 | Asset symbols PIXA / PXS (NAIs are Hive's) | `{{HIVE_SYMBOL}}`/`{{HBD_SYMBOL}}` SQL templates | now defaults, see `PIXAMIND_CHAIN` |
 | Curators get 40% of post rewards | `hive_curation_rewards_percent()` | now `{{CURATION_REWARDS_PERCENT}}` |
-| **Forking HAF context**: reversible blocks are indexed, HAF's fork manager (HFM) rewinds the registered tables on a micro-fork | `haf_functions.py`, `schema.py` | see §3.2 |
-| Massive-sync speedups (drop indexes/FKs, UNLOGGED tables) are skipped because the tables are registered with HFM | `db_state.py` | a consequence of forking mode |
+| A forking HAF context, with every table registered with HAF's fork manager (HFM) | `haf_functions.py`, `schema.py` | **reverted**: non-forking again, as upstream (§3.2) |
+| Massive-sync speedups (drop indexes/FKs, UNLOGGED tables) skipped for registered tables | `db_state.py` | kept for databases set up by the forking build |
 | A sync from scratch always takes the full finalization path (the chain is shorter than the 2M-block threshold) | `db_state.py` | |
 
 ## 2. The proposal against the code
@@ -70,7 +70,7 @@ The proposal (November 2026) was written from the README and Hive documentation.
 of its premises do not hold for 1.28.8; Pixamind's first release is planned around what
 the code actually does.
 
-| Proposal assumption | What 1.28.8 does | Pixamind 0.1.0 |
+| Proposal assumption | What 1.28.8 does | Pixamind |
 |---|---|---|
 | §4.1 operation-by-operation Python writes, many round trips | ~20 set-based SQL statements per batch over a staging table, phases in parallel | kept as is; **measured** first: per-phase telemetry, Prometheus, `pixamind sync-report` |
 | §4.2 projections must become incremental | they are (votes → touched posts, feed and notification caches per batch, idempotent replay) | new projections follow the same per-range, idempotent pattern |
@@ -78,7 +78,7 @@ the code actually does.
 | §4.5 graph tables needed | five adjacency tables with forward and reverse indexes | batch relationship lookups (`pixamind_graph`) |
 | §5.3 notifications aggregated at request time | projected at sync time into `hive_notification_cache` | unchanged |
 | §6 event-driven architecture with an outbox | absent | **added**: `pixamind.events` + `pixamind_api.get_events` (opt-in) |
-| §7 only irreversible blocks are indexed | Pixa's fork indexes **reversible** blocks (forking context) | documented; the outbox is fork-safe; decision deferred to measurements (§3.2) |
+| §7 only irreversible blocks are indexed | upstream: yes; Pixa's fork switched to **reversible** blocks (forking context) | irreversible only again (§3.2); the outbox is fork-safe either way |
 | §8.4 metrics for the Control Tower | logs and one Prometheus gauge | **added**: metrics, `pixamind.sync_batches`, `pixamind_api.get_metrics` |
 | §7/§13 determinism and differential tests | tavern API suite on Hive data | **added**: projection fingerprints, `pixamind integrity`, `pixamind apidiff`, SQL harness |
 | §15 rename `hivemind_app` → `pixamind_app` | — | deferred (non-destructive first release, as §15 itself recommends) |
@@ -106,24 +106,32 @@ Items 1 and 2 are corrected for new data; rows already stored keep the old value
 a resync (the Pixa chain is small: about 1.2M blocks in October 2026). See
 [MIGRATION.md](MIGRATION.md).
 
-### 3.2 Forking mode: a decision to make with data
+### 3.2 Forking mode: turned off
 
-Pixa's fork switched the HAF context to *forking* (`_is_forking => TRUE`) and registers
-every table with HAF's fork manager. Effects:
+Pixa's fork switched the HAF context to *forking* (`_is_forking => TRUE`) and registered
+every table with HAF's fork manager, so that the API showed a block as soon as it was
+produced. Pixamind is back to upstream's non-forking context: only irreversible blocks
+are indexed.
 
-* **For:** the API reflects a block as soon as it is produced, before it is irreversible.
-* **Against:** every row change in live sync is also written to HFM shadow tables; the
-  massive-sync speedups (dropping indexes and FKs, UNLOGGED tables — upstream measured
-  ~355 vs ~137 blocks/s) are disabled; the fork has to carry registration workarounds
-  (`hive_state`, the context root table).
-* If Pixa's witnesses run Hive's one-block irreversibility, the last irreversible block
-  trails the head by one or two blocks, and the latency won by forking mode is a few
-  seconds. With few witnesses or slow confirmations it can be much more.
-
-Recommendation: watch `lag.reversible_blocks_processed` and
-`live_latency_seconds` in `pixamind_api.get_metrics` for a week. If LIB lags by only a
-block or two, a non-forking context is simpler and cheaper. Pixamind's own projections
-work in both modes.
+* **Latency:** Pixa runs all of its scheduled witnesses, so one-block irreversibility
+  keeps the last irreversible block within about a block of the head. The API trails the
+  chain by a few seconds at most, not the 45–60 seconds irreversibility takes without
+  fast confirmations.
+* **Gains:** no shadow-table writes in live sync, and upstream's massive-sync speedups
+  are back: foreign keys are dropped during massive sync, and a sync more than 2M blocks
+  behind also drops indexes and, on an initial sync, uses UNLOGGED tables (upstream
+  measured ~355 vs ~137 blocks/s). The registration workarounds are gone
+  (`haf_functions.py` is upstream's again, and `schema.py` no longer registers tables).
+* **Existing databases:** `setup` switches the context to non-forking. HAF rewinds it to
+  the last irreversible block and the indexer re-indexes from there (Pixamind's
+  projections rewrite those blocks). The old registrations stay, so `db_state.py` still
+  skips the index and FK juggling for such a database; a resync, recommended anyway
+  (§3.1), gives a clean one.
+* **Watch:** `pixamind_block_to_commit_seconds` (and `live_latency_seconds` in
+  `get_metrics`) now include the wait for irreversibility. If witnesses miss blocks or
+  confirmations it grows, and the alert in [OPERATIONS.md](OPERATIONS.md) fires. Going
+  back to forking would mean reverting this change; Pixamind's own projections work in
+  both modes.
 
 ### 3.3 Noted, not changed
 

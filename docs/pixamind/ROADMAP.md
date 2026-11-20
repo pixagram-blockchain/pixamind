@@ -1,7 +1,7 @@
 # Pixamind roadmap
 
 The November 2026 proposal's phases, re-planned against the code as it is
-([ARCHITECTURE.md](ARCHITECTURE.md) §2). ✅ done in 0.1.0 · ◐ partly · ○ to do.
+([ARCHITECTURE.md](ARCHITECTURE.md) §2). ✅ done · ◐ partly · ○ to do.
 
 ## Phase 1 — Foundation and profiling (P0)
 
@@ -13,7 +13,7 @@ The November 2026 proposal's phases, re-planned against the code as it is
 | ✅ | Benchmark tooling | `pixamind bench`, `pixamind sync-report`, telemetry, Prometheus |
 | ✅ | Test bed without a HAF node | SQL harness + real block processor (TESTING.md) |
 | ○ | **Baselines on the Pixa node** | full resync with `--test-max-block` → `sync-report`; a week of `get_metrics`; `bench` on a sampled corpus. Every later target is relative to this. |
-| ○ | **Forking vs. irreversible decision** | from a week of `lag.reversible_blocks_processed` and `live_latency_seconds` (ARCHITECTURE.md §3.2) |
+| ✅ | **Forking vs. irreversible decision** | irreversible only: with all witnesses running, one-block irreversibility keeps the API within a block of the head (ARCHITECTURE.md §3.2) |
 
 Deliverable: the baseline report — the tools are ready; it needs the production node.
 
@@ -24,7 +24,7 @@ checkpoints) already exists upstream. What is left is driven by the Phase 1 numb
 
 | | Item |
 |---|---|
-| ○ | If the node can go non-forking: drop HFM registration, regain the massive-sync speedups |
+| ✅ | Non-forking context without HFM registration: the massive-sync speedups are back (on a database set up or resynced by Pixamind) |
 | ○ | Profile the phases that dominate `sync-report` (posts and votes are the usual suspects) |
 | ○ | Move post-body diff merging (the last Python hot path) into SQL or a native extension, if it shows up |
 | ○ | Re-enable the HF17 cashout shortcut for Pixa (`_last_safe_cashout_block`) after verifying Pixa's 7-day cashout from genesis |

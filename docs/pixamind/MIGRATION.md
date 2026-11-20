@@ -1,12 +1,13 @@
 # From pixagram-blockchain/hivemind to Pixamind
 
-Pixamind 0.1.0 is a drop-in replacement for the Pixa Hivemind deployment: same database
+Pixamind is a drop-in replacement for the Pixa Hivemind deployment: same database
 schemas, roles, Docker entrypoint commands and JSON-RPC API. What changes is the name on
-the outside, a few defaults, and the additions.
+the outside, a few defaults, the HAF context mode (irreversible blocks only, as
+upstream), and the additions.
 
 ## What is renamed, what is not
 
-| | Hivemind | Pixamind 0.1.0 |
+| | Hivemind | Pixamind |
 |---|---|---|
 | Repository | `pixagram-blockchain/hivemind` | `pixagram-blockchain/pixamind` |
 | Python distribution | `hivemind` | `pixamind` (packages `hive` + `pixamind`) |
@@ -20,6 +21,7 @@ the outside, a few defaults, and the additions.
 | Database schemas | `hivemind_app`, `hivemind_endpoints`, `hivemind_postgrest_utilities` | unchanged, plus `pixamind` |
 | Database roles, unix user, container paths | `hivemind`, `hivemind_user`, `/home/hivemind` | unchanged |
 | HAF context / registry name | `hivemind_app` | unchanged |
+| HAF context mode | forking: reversible blocks, tables registered with the fork manager | non-forking: irreversible blocks only, no registration (upstream's setup) |
 
 Keeping the database names is deliberate (the proposal's §15: no destructive migration
 in the first release). Other HAF applications and operator scripts that know
@@ -41,10 +43,12 @@ in the first release). Other HAF applications and operator scripts that know
 ## Upgrading a node
 
 1. Build or pull `pixadock/pixamind` (see the README) and point the compose file at it.
-2. Run the `setup` command once with the HAF admin URL, as for any Hivemind upgrade. It
-   creates the `pixamind` schema (creating a schema needs the admin role; the sync role
-   usually cannot). Without this step the indexer still runs, with Pixamind features off
-   and a warning in the log.
+2. Stop `sync`, then run the `setup` command once with the HAF admin URL, as for any
+   Hivemind upgrade. It creates the `pixamind` schema (creating a schema needs the admin
+   role; the sync role usually cannot) and switches the `hivemind_app` context to
+   non-forking: HAF rewinds it to the last irreversible block and the indexer re-indexes
+   the few blocks after it. Without this step the indexer still runs, forking and with
+   Pixamind features off, and says so in the log.
 3. Start `sync` and `server` as before. Optionally set `PIXAMIND_EVENTS=true`.
 4. Check: `pixamind info --url <api>` or the `pixamind_api.get_info` method.
 
@@ -55,9 +59,10 @@ Two corrections apply to data written from now on, not to rows already stored:
 * vote rshares of blocks below 905,693 (×10⁶ too large in the current database);
 * `max_accepted_payout` (and other amounts formatted by `legacy_amount`) stored as `HBD`.
 
-Hivemind's tables are registered with HAF's fork manager on Pixa, which rejects edits
-outside block processing, so the clean fix is a resync — about 1.2M blocks in October
-2026, a short job:
+Patching those rows in place would mean recomputing derived values (post rshares,
+payouts, scores) by hand. A resync recomputes everything, and it also drops the old
+build's fork-manager registrations, which stay after `setup` and keep massive sync from
+dropping indexes and foreign keys. About 1.2M blocks in October 2026, a short job:
 
 ```bash
 docker run --rm ... pixadock/pixamind:<tag> uninstall_app --database-admin-url=postgresql://haf_admin@haf/haf_block_log

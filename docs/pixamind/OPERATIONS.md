@@ -55,7 +55,10 @@ Telemetry is kept 7 days in `pixamind.sync_batches` (one row per live block).
 Plus the inherited `hivemind_sync_current_block_blocks` gauge. Useful alerts:
 
 * a Pixamind step failed: `increase(pixamind_projection_failures_total[15m]) > 0`
-* the API falls behind the chain: `histogram_quantile(0.95, rate(pixamind_block_to_commit_seconds_bucket[10m])) > 10`
+* the API falls behind the chain: `histogram_quantile(0.95, rate(pixamind_block_to_commit_seconds_bucket[10m])) > 10`.
+  The context is non-forking, so this includes the wait for the block to become
+  irreversible (normally under a block). A rise while the indexer's own batch times stay
+  flat points at the witnesses (missed blocks or confirmations), not at Pixamind.
 * the indexer stalled: `changes(pixamind_indexer_last_block[2m]) == 0`
 
 ### Logs

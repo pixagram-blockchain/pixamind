@@ -258,9 +258,12 @@ class DbState:
         context is owned by the schema owner, so the call always raises and the
         retry loop starves the sync (~1k blocks/min instead of ~500k).
 
-        Registration is what makes forking mode able to rewind on a microfork,
-        so we keep it and skip the DDL juggling instead: sync still completes,
-        just with indexes and FKs left in place.
+        Pixamind: the context is non-forking and setup() no longer registers
+        tables, so on a database set up by Pixamind this is False and the
+        upstream speedups apply. A database set up by the earlier forking build
+        keeps its registrations after setup() switches the context to
+        non-forking; for it the DDL juggling is skipped, so a massive sync still
+        completes, with indexes and FKs left in place, until it is rebuilt.
         """
         if cls._tables_registered is None:
             cls._tables_registered = bool(

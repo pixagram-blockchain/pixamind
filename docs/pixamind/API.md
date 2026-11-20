@@ -49,8 +49,8 @@ No parameters.
  "chain": {"name": "pixa", "liquid_symbol": "PIXA", "stable_symbol": "PXS", "vests_symbol": "VESTS"},
  "database": {"app_schema": "hivemind_app", "endpoints_schema": "hivemind_endpoints",
               "pixamind_schema": "pixamind", "pixamind_migration": 1},
- "context": {"processed_block": 1234567, "irreversible_block": 1234566, "estimated_head_block": 1234568,
-             "stage": "live", "forking": true, "processed_block_age_seconds": 2.1},
+ "context": {"processed_block": 1234566, "irreversible_block": 1234566, "estimated_head_block": 1234567,
+             "stage": "live", "forking": false, "processed_block_age_seconds": 2.1},
  "features": {"events": true, "events_keep_blocks": 864000, "promotions": true, "telemetry": true},
  "event_types": ["vote", "post_created", "…"],
  "namespaces": ["pixamind_api", "pixamind_content", "pixamind_graph", "pixamind_feed"]}
@@ -61,8 +61,8 @@ No parameters.
 `{"window_minutes": 10}` (1–1440, default 10).
 
 ```json
-{"context": {"processed_block": 1234567, "irreversible_block": 1234566, "…": "…"},
- "lag": {"blocks_behind_head": 1, "blocks_behind_irreversible": 0, "reversible_blocks_processed": 1},
+{"context": {"processed_block": 1234566, "irreversible_block": 1234566, "…": "…"},
+ "lag": {"blocks_behind_head": 1, "blocks_behind_irreversible": 0, "reversible_blocks_processed": 0},
  "window_minutes": 10,
  "throughput": {"batches": 200, "blocks": 200, "ops": 3100, "busy_seconds": 8.4,
                 "blocks_per_second": 0.333, "capacity_blocks_per_second": 23.8, "ops_per_second": 5.167},
@@ -90,7 +90,7 @@ Requires `--pixamind-events`; otherwise error `-32000`. Contract: [EVENTS.md](EV
 | `limit` | int | 1–1000, default 100 |
 | `types` | string[] | e.g. `["post_created", "promotion"]` |
 | `accounts` | string[] | events whose actor **or** target is one of these (≤ 100) |
-| `irreversible_only` | bool | default `true` |
+| `irreversible_only` | bool | default `true`; only matters on a node whose context is still forking |
 
 ```json
 {"events": [{"id": "8589934849-0", "block_num": 2, "timestamp": "2026-09-01T00:00:06",
@@ -99,7 +99,7 @@ Requires `--pixamind-events`; otherwise error `-32000`. Contract: [EVENTS.md](EV
                       "content": {"format": "image", "app": "pixagram/3.0.2", "tags": ["pixelart", "cat"],
                                   "image": {"mime": "image/webp", "width": 128, "height": 96, "…": "…"}}}}],
  "next_cursor": "8589934849-0", "has_more": false,
- "upto_block": 1234566, "processed_block": 1234567, "irreversible_block": 1234566,
+ "upto_block": 1234566, "processed_block": 1234566, "irreversible_block": 1234566,
  "retention": {"oldest_block": 370567, "oldest_id": "…", "possible_gap": false}}
 ```
 

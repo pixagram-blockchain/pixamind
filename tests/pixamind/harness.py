@@ -96,7 +96,7 @@ def build_database(name: str = TEST_DB) -> str:
     conn.close()
 
     # The production installer, minus the HAF-only steps (context creation,
-    # fork-manager registration, index registration, plpython3u extension).
+    # index registration, plpython3u extension).
     from hive.db import schema
     from hive.db.adapter import Db
 

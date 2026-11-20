@@ -48,6 +48,7 @@ class PixamindHooks:
             from pixamind.version import HIVEMIND_BASE, VERSION
 
             metrics.set_build_info(VERSION, HIVEMIND_BASE, CHAIN)
+            cls._warn_if_forking(db)
             installed = db.query_one(f"SELECT to_regprocedure('{AFTER_BATCH_SIGNATURE}') IS NOT NULL")
             if not installed:
                 log.warning('Pixamind schema is not installed: promotions, events and telemetry are off for this run')
@@ -78,6 +79,20 @@ class PixamindHooks:
         except Exception:
             log.exception('Could not configure the Pixamind hooks; they are off for this run')
             cls.enabled = False
+
+    @staticmethod
+    def _warn_if_forking(db) -> None:
+        """The context is created non-forking (irreversible blocks only); one set up by the
+        earlier forking build stays forking until `setup` runs again."""
+        try:
+            forking = db.query_one("SELECT hive.app_is_forking('hivemind_app')")
+        except Exception:  # informational only
+            return
+        if forking:
+            log.warning(
+                'The hivemind_app HAF context is still forking (set up by an earlier build): '
+                'run setup once to switch it to non-forking, or resync (docs/pixamind/MIGRATION.md)'
+            )
 
     @classmethod
     def options(cls) -> dict:

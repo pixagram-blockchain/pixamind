@@ -56,11 +56,12 @@ usually absent.
 * **Order.** Ids follow chain order. Page with `next_cursor`; you never skip an event.
 * **Exactly the chain.** Every batch deletes and rewrites its own block range. A replayed
   batch (crash recovery) produces the same rows; re-indexing gives the same ids.
-* **Irreversible by default.** Pixa's indexer follows reversible blocks. `get_events`
-  only returns blocks up to `min(processed, last irreversible)`, so what you read can
-  never be undone. With `irreversible_only: false` you see newer blocks too, but an event
-  can then disappear in a micro-fork and its replacement may sort before your cursor: use
-  it only for best-effort live UI.
+* **Final.** Pixamind indexes irreversible blocks only (non-forking HAF context), so an
+  event you read can never be undone. On a node whose context is still forking (a
+  database from the earlier build, until `setup` runs again) `get_events` returns blocks
+  up to `min(processed, last irreversible)` by default; `irreversible_only: false` adds
+  newer blocks, but such an event can disappear in a micro-fork and its replacement may
+  sort before your cursor.
 * **Atomic with the social state.** In live sync a block's events commit with the block;
   when you see an event, the API already reflects it.
 * **Retention.** Events older than `--pixamind-events-retention-days` (default 30) are
