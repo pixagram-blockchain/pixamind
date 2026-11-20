@@ -64,6 +64,10 @@ jobs:
       PIXAMIND_TEST_ADMIN_DSN: postgresql://postgres:postgres@localhost:5432/postgres
       # tests/pixamind/test_api_gateway.py must run, not skip
       PIXAMIND_REQUIRE_API_BIN: '1'
+      # Only to build the binary: the runner's stable Rust, without installing the pinned
+      # toolchain and its components (that install is flaky on some runner images; the
+      # rust job checks the pinned version).
+      RUSTUP_TOOLCHAIN: stable
     steps:
       - uses: actions/checkout@v4
         with:
@@ -74,7 +78,6 @@ jobs:
       - name: Build dependencies (cffi has no wheel for every Python)
         run: sudo apt-get update && sudo apt-get install -y libffi-dev
       - run: pip install '.[dev]'
-      - run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
       - name: Build pixamind-api
         run: cargo build --locked -p pixamind-api
