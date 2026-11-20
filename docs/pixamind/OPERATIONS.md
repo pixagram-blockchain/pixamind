@@ -4,8 +4,8 @@
 
 Pixamind runs like the Hivemind it replaces (see the README for Docker commands):
 HAF → reputation_tracker → `setup` → `sync`, then `server` (PostgREST) behind the nginx
-rewriter. Everything Pixamind adds runs inside `sync` and `server`; there is no extra
-service.
+rewriter, or `pixamind-api` in place of both. Everything Pixamind adds runs inside `sync`
+and the API server; there is no extra service.
 
 ## Configuration
 
@@ -60,6 +60,15 @@ Plus the inherited `hivemind_sync_current_block_blocks` gauge. Useful alerts:
   irreversible (normally under a block). A rise while the indexer's own batch times stay
   flat points at the witnesses (missed blocks or confirmations), not at Pixamind.
 * the indexer stalled: `changes(pixamind_indexer_last_block[2m]) == 0`
+
+With `pixamind-api` in place of PostgREST ([API-SERVER.md](API-SERVER.md)), its admin port
+(3001) serves `/metrics` too: `pixamind_api_requests_total{function,method,status}`,
+`pixamind_api_request_duration_seconds`, `pixamind_api_requests_in_flight`,
+`pixamind_api_db_connections{state}`. Alerts worth having:
+
+* errors: `sum(rate(pixamind_api_requests_total{status=~"5.."}[5m])) > 0`
+* slow methods: `histogram_quantile(0.95, sum by (le, method) (rate(pixamind_api_request_duration_seconds_bucket[10m]))) > 1`
+* pool exhausted: `pixamind_api_db_connections{state="waiting"} > 0` for several minutes
 
 ### Logs
 

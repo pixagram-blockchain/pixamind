@@ -21,6 +21,27 @@ jobs:
       - name: Shell syntax
         run: for f in docker/*.sh scripts/*.sh scripts/ci/*.sh; do bash -n "$f"; done
 
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install   # the one in rust-toolchain.toml
+      - uses: Swatinem/rust-cache@v2
+      - name: Format, lint and unit tests (pixamind-api)
+        run: |
+          cargo fmt --check
+          cargo clippy --locked --all-targets -- -D warnings
+          cargo test --locked
+
+  api-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the pixamind-api image
+        run: docker build -f Dockerfile.api -t pixamind-api:ci .
+      - name: The image starts
+        run: docker run --rm pixamind-api:ci --version
+
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -41,6 +62,8 @@ jobs:
       # The SQL tests install the real hivemind + Pixamind SQL on this server,
       # with HAF replaced by tests/pixamind/sql/haf_stub.sql.
       PIXAMIND_TEST_ADMIN_DSN: postgresql://postgres:postgres@localhost:5432/postgres
+      # tests/pixamind/test_api_gateway.py must run, not skip
+      PIXAMIND_REQUIRE_API_BIN: '1'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -51,5 +74,14 @@ jobs:
       - name: Build dependencies (cffi has no wheel for every Python)
         run: sudo apt-get update && sudo apt-get install -y libffi-dev
       - run: pip install '.[dev]'
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - name: Build pixamind-api
+        run: cargo build --locked -p pixamind-api
+      - name: PostgREST 12.0.2 (what the Pixamind image runs), to compare pixamind-api with
+        run: |
+          curl -fsSL https://github.com/PostgREST/postgrest/releases/download/v12.0.2/postgrest-v12.0.2-linux-static-x64.tar.xz \
+            | tar -xJ -C "$RUNNER_TEMP"
+          echo "PIXAMIND_TEST_POSTGREST=$RUNNER_TEMP/postgrest" >> "$GITHUB_ENV"
       - name: Unit, SQL and end-to-end tests
         run: pytest tests/utils tests/pixamind -q

@@ -31,6 +31,7 @@ can be rebuilt from them.
 hived (Pixa) ─► HAF (PostgreSQL) ─► pixamind sync ─► hivemind_app.* + pixamind.*
                                                           │
                      clients ─► nginx ─► PostgREST ─► hivemind_endpoints.home (JSON-RPC)
+                     clients ─► pixamind-api (Rust) ─┘   (in place of nginx + PostgREST)
 ```
 
 * **Indexer** (`pixamind sync`): pulls block ranges from HAF and processes them with
@@ -38,7 +39,9 @@ hived (Pixa) ─► HAF (PostgreSQL) ─► pixamind sync ─► hivemind_app.* 
   each batch, Pixamind's own phase indexes promotions, writes the event outbox and
   records telemetry; it can never stop the core indexer.
 * **API server** (`server`): PostgREST runs PL/pgSQL functions; there is no Python in the
-  request path.
+  request path. `pixamind-api`, a single Rust binary, can replace PostgREST and the nginx
+  rewriter: same functions, same answers byte for byte
+  ([docs/pixamind/API-SERVER.md](docs/pixamind/API-SERVER.md)).
 
 Details: [docs/pixamind/ARCHITECTURE.md](docs/pixamind/ARCHITECTURE.md).
 
@@ -61,6 +64,11 @@ docker run -d --network=haf --name=pixamind pixadock/pixamind:<tag> sync \
 docker run -d --network=haf --name=pixamind-server pixadock/pixamind:<tag> server \
   --database-url=postgresql://hivemind@haf:5432/haf_block_log
 docker run -d --network=haf -p 8080:80 --name=pixamind-rewriter <rewriter image>
+
+# or, in place of the two containers above, the Rust API server
+docker build -f Dockerfile.api -t pixadock/pixamind-api:local .
+docker run -d --network=haf -p 8080:8080 --name=pixamind-api pixadock/pixamind-api:local \
+  --database-url=postgresql://hivemind@haf:5432/haf_block_log
 
 curl -s localhost:8080 -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"pixamind_api.get_info"}'
@@ -117,8 +125,10 @@ pixamind sync-report  where indexing time goes, from an indexer log
 python3 -m venv venv && . venv/bin/activate
 pip install -e '.[dev]'
 export PIXAMIND_TEST_ADMIN_DSN=postgresql://postgres:postgres@localhost:5432/postgres
-pytest tests/utils tests/pixamind        # unit, SQL harness and end-to-end sync tests
+cargo build -p pixamind-api              # the API server; its tests below use the binary
+pytest tests/utils tests/pixamind        # unit, SQL harness, end-to-end sync, API server
 ruff check pixamind tests/pixamind && ruff format pixamind tests/pixamind
+cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test
 ```
 
 The SQL tests need only a PostgreSQL server: they install the production SQL over a
@@ -126,7 +136,7 @@ small HAF stand-in and drive the real block processor over synthetic Pixa blocks
 
 Code layout: `hive/` is the inherited engine, kept close to upstream so Hivemind
 releases can still be merged; `pixamind/` holds everything Pixamind adds, with its SQL in
-`pixamind/sql/`. The inherited API test suite (tavern) and its HAF-based CI are described
+`pixamind/sql/`; `crates/` holds the Rust code. The inherited API test suite (tavern) and its HAF-based CI are described
 in the [upstream README](docs/hivemind/README.md).
 
 ## Documentation
@@ -135,6 +145,7 @@ in the [upstream README](docs/hivemind/README.md).
 * [Roadmap](docs/pixamind/ROADMAP.md) — the modernization plan against the code
 * [Migration](docs/pixamind/MIGRATION.md) — from `pixagram-blockchain/hivemind`
 * [API](docs/pixamind/API.md) · [Events](docs/pixamind/EVENTS.md) · [Promoted posts](docs/pixamind/PROMOTED_POSTS.md)
+* [API server in Rust](docs/pixamind/API-SERVER.md) — `pixamind-api`, in place of PostgREST and nginx
 * [Operations](docs/pixamind/OPERATIONS.md) · [Testing and benchmarks](docs/pixamind/TESTING.md)
 * Upstream: [Hivemind README](docs/hivemind/README.md), [communities](docs/communities.md), [follows](docs/follows.md)
 

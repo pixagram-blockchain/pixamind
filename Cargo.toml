@@ -1,0 +1,16 @@
+# Rust workspace of Pixamind. The Python package (hive/, pixamind/) is built by
+# setup.cfg/pyproject.toml; the crates here are built with cargo.
+[workspace]
+resolver = "3"
+members = ["crates/pixamind-api"]
+
+[workspace.package]
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/pixagram-blockchain/pixamind"
+rust-version = "1.85"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
