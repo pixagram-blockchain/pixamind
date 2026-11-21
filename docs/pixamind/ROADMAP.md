@@ -66,6 +66,21 @@ checkpoints) already exists upstream. What is left is driven by the Phase 1 numb
 Only where Phase 1–3 measurements show a hot path that the whole pipeline would gain
 from (proposal §8.1): candidates are operation decoding and post-body merging.
 
+## Rust
+
+The Rust plan of November 2026, in the order that removes components before touching
+business logic. Python only drives the indexer, and the indexing and API logic is about
+37k lines of SQL (Pixamind, HAfAH and the reputation tracker together), so the gains
+come from replacing components and then the measured hot paths, not from a rewrite.
+
+| | Item | |
+|---|---|---|
+| ✅ | API server in Rust in place of PostgREST and the nginx rewriter, calling the existing SQL; checked against PostgREST 12.0.2 in CI | `pixamind-api`, API-SERVER.md |
+| ○ | Switch production to it after `pixamind apidiff` on a sampled corpus | API-SERVER.md, "Switching over" |
+| ○ | Serve HAfAH and the reputation tracker from it (HAfAH's rules need `$path_filters`) | |
+| ○ | Move API methods to Rust one at a time where `pixamind bench` shows a gain, each checked against the SQL version | |
+| ○ | Indexer loop in Rust (the ~7.6k lines of Python orchestration), keeping the set-based SQL | |
+
 ## Release practice
 
 * Merge upstream Hivemind releases into `hive/` (the touched upstream files are listed in

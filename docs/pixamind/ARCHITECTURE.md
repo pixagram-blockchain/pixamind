@@ -29,6 +29,7 @@ modernization proposal assumed, and where Pixamind's additions sit.
                      │ reads
                      ▼
  nginx (JSON-RPC rewrite) ─► PostgREST ─► hivemind_endpoints.home(json)
+   or pixamind-api (Rust, both in one) ─┘
                                             └► hivemind_postgrest_utilities.dispatch
                                                  ├ bridge, condenser_api, follow_api, tags_api,
                                                  │ database_api, hive, search-api  (inherited)
@@ -51,7 +52,9 @@ modernization proposal assumed, and where Pixamind's additions sit.
   `follow_muted`, `follow_blacklisted`, each with a `(follower, following)` primary key
   and a `following` index.
 * **API is SQL too**: PostgREST exposes `hivemind_endpoints.home`, which dispatches
-  JSON-RPC methods to PL/pgSQL functions; there is no Python server.
+  JSON-RPC methods to PL/pgSQL functions; there is no Python server. `pixamind-api`, in
+  Rust, can take the place of nginx and PostgREST: it calls the same functions and
+  answers byte for byte as PostgREST does ([API-SERVER.md](API-SERVER.md)).
 
 ### Pixa specifics inherited from `pixagram-blockchain/hivemind`
 
@@ -154,7 +157,9 @@ pixamind/    everything Pixamind adds
   tools/               pixamind info | integrity | events | corpus | apidiff | bench | sync-report
   sql/migrations/      NNNN_*.sql: tables, applied once, recorded in pixamind.schema_migrations
   sql/runtime/         functions and API methods, reinstalled on every start
-tests/pixamind/       unit tests, SQL harness (real SQL over a HAF stub), end-to-end sync tests
+crates/pixamind-api/  the API server in Rust (in place of PostgREST and the nginx rewriter)
+tests/pixamind/       unit tests, SQL harness (real SQL over a HAF stub), end-to-end sync tests,
+                      the API server against the SQL and against PostgREST
 docs/pixamind/        this documentation
 ```
 

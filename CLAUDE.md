@@ -22,7 +22,8 @@ hive/        inherited Hivemind engine — keep it close to upstream (Hivemind r
 pixamind/    Pixamind additions: conf.py, db/install.py, indexer/hooks.py, observability/, tools/, cli.py
 pixamind/sql/migrations/NNNN_*.sql   tables; applied once; NEVER edit an applied migration, add a new one
 pixamind/sql/runtime/*.sql           functions and API methods; reinstalled on every start (file order)
-tests/pixamind/                      unit tests, SQL harness, end-to-end sync tests
+crates/pixamind-api/                 Rust API server in place of PostgREST + the nginx rewriter (calls the SQL API)
+tests/pixamind/                      unit tests, SQL harness, end-to-end sync tests, API server tests
 docs/pixamind/                       Pixamind docs;  docs/hivemind/README.md is the upstream README
 ```
 
@@ -46,6 +47,11 @@ pytest tests/utils tests/pixamind
 
 # lint/format Pixamind code (ruff targets py312: python_requires >= 3.12)
 ruff check pixamind tests/pixamind tests/utils && ruff format pixamind tests/pixamind
+
+# Rust (toolchain pinned in rust-toolchain.toml); tests/pixamind/test_api_gateway.py runs
+# target/debug/pixamind-api (skipped if not built) and, with PIXAMIND_TEST_POSTGREST set
+# to a PostgREST 12.0.2 binary, compares every case with PostgREST
+cargo build -p pixamind-api && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test
 
 # indexer against a HAF database
 pixamind sync --database-url=postgresql://hivemind@localhost:5432/haf_block_log \

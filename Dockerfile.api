@@ -1,0 +1,24 @@
+# pixamind-api: Pixamind's JSON-RPC and REST API server, in place of PostgREST
+# and the nginx rewriter (docs/pixamind/API-SERVER.md).
+#
+#   docker build -f Dockerfile.api -t pixadock/pixamind-api:local .
+#   docker run -p 8080:8080 -p 3001:3001 \
+#     -e PIXAMIND_API_DATABASE_URL=postgresql://hivemind@haf:5432/haf_block_log \
+#     pixadock/pixamind-api:local
+FROM rust:1.97.0-bookworm AS build
+WORKDIR /src
+COPY Cargo.toml Cargo.lock rust-toolchain.toml rustfmt.toml rewrite_rules.conf ./
+COPY crates ./crates
+RUN cargo build --release --locked -p pixamind-api
+
+FROM debian:bookworm-slim
+LABEL org.opencontainers.image.title="pixamind-api" \
+      org.opencontainers.image.description="Pixamind's JSON-RPC and REST API server" \
+      org.opencontainers.image.source="https://github.com/pixagram-blockchain/pixamind" \
+      org.opencontainers.image.licenses="MIT"
+RUN useradd --system --uid 10001 --no-create-home pixamind
+COPY --from=build /src/target/release/pixamind-api /usr/local/bin/pixamind-api
+USER pixamind
+EXPOSE 8080 3001
+HEALTHCHECK --interval=10s --timeout=6s --start-period=20s --retries=3 CMD ["pixamind-api", "--healthcheck"]
+ENTRYPOINT ["pixamind-api"]

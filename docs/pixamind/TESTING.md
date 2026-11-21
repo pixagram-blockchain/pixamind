@@ -7,14 +7,23 @@
 | Unit tests | `tests/utils`, `tests/pixamind/test_tools.py`, `test_config.py` | Python | yes |
 | SQL harness | `tests/pixamind/test_content_metadata.py`, `test_install.py` | any PostgreSQL 14+ | yes |
 | End-to-end sync | `tests/pixamind/test_live_sync.py`, `test_massive_sync.py`, `test_integrity_tool.py` | PostgreSQL | yes |
+| API server | `crates/pixamind-api` (`cargo test`), `tests/pixamind/test_api_gateway.py` | PostgreSQL, the built binary; PostgREST 12.0.2 for the comparison | yes |
 | Inherited API suite (tavern) | `tests/api_tests/hivemind/tavern` | HAF with Hive's first 5M blocks + mocks | no (GitLab CI, `docker/docker-compose-*.yml`) |
 | Load tests (k6) | `tests/performance` | a synced node | manual |
 
 ```bash
 pip install -e '.[dev]'
+cargo build -p pixamind-api   # else the API server tests are skipped
 export PIXAMIND_TEST_ADMIN_DSN=postgresql://postgres:postgres@localhost:5432/postgres
+export PIXAMIND_TEST_POSTGREST=/path/to/postgrest   # optional: compare with PostgREST 12.0.2
 pytest tests/utils tests/pixamind
 ```
+
+`test_api_gateway.py` runs `pixamind-api` on a synced harness database. Each JSON-RPC
+case must come back byte for byte as `home()` returns it in SQL; with
+`PIXAMIND_TEST_POSTGREST` set, every case also goes to a real PostgREST, and status,
+body and headers must match ([API-SERVER.md](API-SERVER.md)). CI downloads the PostgREST
+release the Pixamind image uses.
 
 ### The SQL harness
 

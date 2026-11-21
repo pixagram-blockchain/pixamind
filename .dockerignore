@@ -54,3 +54,6 @@ local.db
 *.db
 envfile
 /deploy
+
+# Rust build output
+target/
