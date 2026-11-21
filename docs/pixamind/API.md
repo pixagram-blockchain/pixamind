@@ -48,13 +48,23 @@ No parameters.
 {"name": "pixamind", "version": "0.1.0", "hivemind_base": "1.28.8", "git_revision": "…",
  "chain": {"name": "pixa", "liquid_symbol": "PIXA", "stable_symbol": "PXS", "vests_symbol": "VESTS"},
  "database": {"app_schema": "hivemind_app", "endpoints_schema": "hivemind_endpoints",
-              "pixamind_schema": "pixamind", "pixamind_migration": 1},
+              "pixamind_schema": "pixamind", "pixamind_migration": 2,
+              "jit": {"api": "off", "database": "off"}},
  "context": {"processed_block": 1234566, "irreversible_block": 1234566, "estimated_head_block": 1234567,
              "stage": "live", "forking": false, "processed_block_age_seconds": 2.1},
- "features": {"events": true, "events_keep_blocks": 864000, "promotions": true, "telemetry": true},
+ "features": {"events": true, "events_keep_blocks": 864000, "promotions": true, "telemetry": true,
+              "feed_cache": true},
+ "feed_cache": {"enabled": true, "targets": 6, "fresh": 6, "failing": 0, "block": 1234566, "size_bytes": 196608},
  "event_types": ["vote", "post_created", "…"],
  "namespaces": ["pixamind_api", "pixamind_content", "pixamind_graph", "pixamind_feed"]}
 ```
+
+`database.jit`: `api` is JIT inside API calls (always `off`, see
+[OPERATIONS.md](OPERATIONS.md#jit)); `database` is the database-level default, `null` if
+the database has none. `feed_cache`: the shared feeds cache
+([FEED-CACHE.md](FEED-CACHE.md)) — `fresh` targets are served from the cache at the
+current block, `failing` ones could not be computed (the API computes them, and returns
+the same error); on a standby it only reports `"standby": true`.
 
 ### `get_metrics` — indexer health (for the Systemic Control Tower)
 

@@ -34,6 +34,8 @@ checkpoints) already exists upstream. What is left is driven by the Phase 1 numb
 
 | | Item |
 |---|---|
+| ✅ | JIT off for every API call, whatever the database settings (OPERATIONS.md#jit) |
+| ✅ | Shared feeds cache: observer-less first pages computed once per block, served byte-identical (FEED-CACHE.md) |
 | ○ | Capture the slowest API calls with `pixamind bench` + `pg_stat_statements`/`auto_explain` (`--log_explain_queries`) |
 | ○ | Index review against real plans and write amplification (the proposal's §4.3 list, validated, not applied blindly) |
 | ○ | Cursor pagination for remaining offset-style methods |

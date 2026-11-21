@@ -454,6 +454,10 @@ class Blocks:
             OPSM.stop(time_start),
         )
 
+        # Pixamind: shared feeds cache, recomputed once the block is visible, in its
+        # own transaction (never delays the block; never raises).
+        PixamindHooks.after_live_commit(db, first_block, last_block)
+
     @classmethod
     def _process_post_results_for_cache(cls, post_results):
         """Process SQL post results for PostDataCache body merging.

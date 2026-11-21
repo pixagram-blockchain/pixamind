@@ -1,8 +1,26 @@
+-- Pixamind: the result the indexer already computed for a request at the current
+-- block (shared feeds cache), or NULL to compute it. This default caches nothing;
+-- pixamind/sql/runtime/90_feed_cache.sql replaces it once the Pixamind schema is
+-- installed, so the API keeps working, uncached, if that schema is missing.
+CREATE OR REPLACE FUNCTION hivemind_postgrest_utilities.cached_result(_api TEXT, _method TEXT, _params JSONB)
+RETURNS JSON
+LANGUAGE sql
+STABLE
+AS
+$$
+  SELECT NULL::JSON
+$$
+;
+
 DROP FUNCTION IF EXISTS hivemind_endpoints.home(JSON);
 CREATE FUNCTION hivemind_endpoints.home(JSON)
 RETURNS JSON
 LANGUAGE 'plpgsql'
 STABLE
+-- Pixamind: no JIT for API calls, whatever the database or role settings (the
+-- database-level jit=off of install_app.sql is lost when a dump is restored into
+-- a new database). LLVM compilation costs more than it saves on these queries.
+SET jit = off
 AS
 $$
 DECLARE
@@ -14,6 +32,7 @@ DECLARE
   __api_type TEXT;
   __method_type TEXT;
   __params_jsonb JSONB;
+  __cached JSON;
 BEGIN
 
   __jsonrpc = __request_data->>'jsonrpc';
@@ -59,6 +78,12 @@ BEGIN
     SELECT split_part(__method, '.', 2) INTO __method_type;
   END IF;
 
+  -- Pixamind: shared feeds are computed once per block by the indexer; same bytes
+  -- as dispatch() below would produce (docs/pixamind/FEED-CACHE.md)
+  __cached = hivemind_postgrest_utilities.cached_result(__api_type, __method_type, __params_jsonb);
+  IF __cached IS NOT NULL THEN
+    RETURN json_build_object( 'id', __id, 'jsonrpc', '2.0', 'result', __cached );
+  END IF;
 
   RETURN json_build_object( 'id', __id, 'jsonrpc', '2.0', 'result', hivemind_postgrest_utilities.dispatch(__api_type, __method_type, __params_jsonb) );
 

@@ -77,6 +77,12 @@ Docker: `docker build -t pixadock/pixamind:local .`; entrypoint commands `setup`
   `pixamind.projection_failures`). Never let them raise into the block processor.
 * Never put surrogate ids (post_id, account id) in event payloads: events must be
   identical on every node.
+* The shared feeds cache (`docs/pixamind/FEED-CACHE.md`) answers the requests in
+  `pixamind.feed_cache_targets` from what the indexer computed for the current block.
+  API methods must therefore depend only on indexed data and the head block
+  (`hivemind_app.head_block_time()`), never on `now()`, `random()` or session settings
+  other than `hivemind_app.max_posts_per_call`. `tests/pixamind/test_feed_cache.py`
+  compares cached and computed answers byte for byte.
 * The HAF context is **non-forking** (irreversible blocks only), as upstream. Don't
   register tables with HAF's fork manager: that is for forking contexts and turns off
   the massive-sync speedups. Databases from the earlier forking build keep registered

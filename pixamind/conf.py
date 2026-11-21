@@ -7,6 +7,7 @@ work with `pixamind sync`, `hive sync` and the docker entrypoint alike:
     --pixamind-events-retention-days / PIXAMIND_EVENTS_RETENTION_DAYS (default 30, 0 = forever)
     --pixamind-promotions / PIXAMIND_PROMOTIONS                 promoted posts (default on)
     --pixamind-telemetry / PIXAMIND_TELEMETRY                   per-batch telemetry (default on)
+    --pixamind-feed-cache / PIXAMIND_FEED_CACHE                 shared feeds cache (default on)
 """
 
 from __future__ import annotations
@@ -48,6 +49,13 @@ def add_arguments(add) -> None:
         default=True,
         help='record per-batch timings for pixamind_api.get_metrics',
     )
+    add(
+        '--pixamind-feed-cache',
+        type=strtobool,
+        env_var='PIXAMIND_FEED_CACHE',
+        default=True,
+        help='compute the observer-less feeds of pixamind.feed_cache_targets once per block (docs/pixamind/FEED-CACHE.md)',
+    )
 
 
 @dataclass(frozen=True)
@@ -56,6 +64,7 @@ class PixamindSettings:
     events_retention_days: int = 30
     promotions: bool = True
     telemetry: bool = True
+    feed_cache: bool = True
 
     @property
     def events_keep_blocks(self) -> int:
@@ -76,4 +85,5 @@ class PixamindSettings:
             events_retention_days=int(get('pixamind_events_retention_days', cls.events_retention_days)),
             promotions=bool(get('pixamind_promotions', cls.promotions)),
             telemetry=bool(get('pixamind_telemetry', cls.telemetry)),
+            feed_cache=bool(get('pixamind_feed_cache', cls.feed_cache)),
         )

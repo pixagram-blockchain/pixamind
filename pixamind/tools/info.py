@@ -16,6 +16,17 @@ def _fmt(value, suffix='') -> str:
     return '-' if value is None else f'{value}{suffix}'
 
 
+def _feed_cache_line(cache: dict) -> str:
+    if not cache:
+        return 'Feed cache   -'
+    if cache.get('standby'):
+        return f"Feed cache   {'on' if cache.get('enabled') else 'off'}, {_fmt(cache.get('targets'))} targets (standby: not served)"
+    return (
+        f"Feed cache   {'on' if cache.get('enabled') else 'off'}, {_fmt(cache.get('fresh'))}/{_fmt(cache.get('targets'))} "
+        f"targets fresh at block {_fmt(cache.get('block'))}, {_fmt(cache.get('failing'))} failing"
+    )
+
+
 def render(info: dict, metrics: dict) -> str:
     ctx = metrics.get('context', {})
     lag = metrics.get('lag', {})
@@ -39,6 +50,9 @@ def render(info: dict, metrics: dict) -> str:
         f"Events       {'on' if events.get('enabled') else 'off'}, blocks {_fmt(events.get('oldest_block'))}.."
         f"{_fmt(events.get('newest_block'))}, ~{_fmt(events.get('estimated_count'))} rows",
         f"Promoted     {_fmt(metrics.get('promoted_posts'))} posts",
+        _feed_cache_line(info.get('feed_cache') or {}),
+        f"JIT          {_fmt((info.get('database') or {}).get('jit', {}).get('api'))} in API calls, database default "
+        f"{_fmt((info.get('database') or {}).get('jit', {}).get('database'))}",
         f"Failures     {_fmt(failures.get('open'))} open",
     ]
     for failure in failures.get('latest', []):

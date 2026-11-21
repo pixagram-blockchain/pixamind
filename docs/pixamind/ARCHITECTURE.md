@@ -164,10 +164,11 @@ docs/pixamind/        this documentation
 ```
 
 Upstream files touched by Pixamind are few and marked with `Pixamind` comments:
-`hive/conf.py`, `hive/db/schema.py`, `hive/db/db_state.py`, `hive/indexer/blocks.py`,
-`hive/indexer/sync.py`, `hive/indexer/community.py`, `hive/utils/chain.py`, and in SQL
-`massive_sync.sql`, `assets_operations.sql`, `dispatch.sql`, `get_api_method.sql`,
-`home.sql`, `bridge_api_get_ranked_posts.sql`.
+`hive/conf.py`, `hive/db/schema.py`, `hive/db/db_state.py`, `hive/indexer/blocks.py`
+(the hooks after each batch, live block and live COMMIT), `hive/indexer/sync.py`,
+`hive/indexer/community.py`, `hive/utils/chain.py`, and in SQL `massive_sync.sql`,
+`assets_operations.sql`, `dispatch.sql`, `get_api_method.sql`, `home.sql` (Pixamind
+methods, `SET jit = off`, the shared feeds cache lookup), `bridge_api_get_ranked_posts.sql`.
 
 ## 5. Guarantees of the Pixamind additions
 
@@ -181,6 +182,10 @@ Upstream files touched by Pixamind are few and marked with `Pixamind` comments:
 * **Deterministic.** Pixamind rows are derived from chain data only (no surrogate ids in
   event payloads); event ids are HAF operation ids. Massive and live indexing produce
   identical fingerprints (`tests/pixamind/test_massive_sync.py`).
+* **No stale answers from the cache.** The shared feeds cache ([FEED-CACHE.md](FEED-CACHE.md))
+  serves a row only while the context is still at the block it was computed for, with
+  the bytes the API produced then (only the reputation tracker's data, synced by its own
+  process, can be up to a block older); every other request is computed as upstream.
 * **Fork-safe without HFM.** Each batch deletes and rewrites its own block range, so
   re-processed blocks replace abandoned ones; readers of the outbox see only blocks the
   context has processed, and by default only irreversible ones.
