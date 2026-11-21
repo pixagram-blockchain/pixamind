@@ -47,10 +47,14 @@ def test_cli_options_and_settings(monkeypatch):
     )
     monkeypatch.setenv('PIXAMIND_EVENTS_RETENTION_DAYS', '7')
     monkeypatch.setenv('PIXAMIND_PROMOTIONS', 'false')
+    monkeypatch.setenv('PIXAMIND_FEED_CACHE', 'false')
     conf = Conf()
     conf.init_argparse(strict=False)
     settings = PixamindSettings.from_conf(conf)
-    assert settings == PixamindSettings(events=True, events_retention_days=7, promotions=False, telemetry=True)
+    assert settings == PixamindSettings(
+        events=True, events_retention_days=7, promotions=False, telemetry=True, feed_cache=False
+    )
+    assert PixamindSettings().feed_cache is True  # on by default
     assert settings.events_keep_blocks == 7 * BLOCKS_PER_DAY
     assert conf.get('community_start_block') == 1
 

@@ -233,5 +233,16 @@ def test_info_render(node_factory, capsys):
     out = capsys.readouterr().out
     assert 'Pixamind 0.1.0 (hivemind 1.28.8) on pixa [PIXA/PXS]' in out
     assert 'p50 1.2 s, p95 2.5 s' in out and 'events 5..5: boom' in out
+    assert 'Feed cache   -' in out and 'JIT          - in API calls' in out  # a node without them
     broken = node_factory({})
     assert info.main(['--url', broken.url]) == 1
+    text = info.render(
+        {
+            'database': {'jit': {'api': 'off', 'database': None}},
+            'feed_cache': {'enabled': True, 'targets': 6, 'fresh': 5, 'failing': 1, 'block': 100},
+        },
+        {},
+    )
+    assert 'Feed cache   on, 5/6 targets fresh at block 100, 1 failing' in text
+    assert 'JIT          off in API calls, database default -' in text
+    assert 'standby: not served' in info.render({'feed_cache': {'enabled': True, 'targets': 6, 'standby': True}}, {})

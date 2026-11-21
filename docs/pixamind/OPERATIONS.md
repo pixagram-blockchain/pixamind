@@ -15,11 +15,36 @@ and the API server; there is no extra service.
 | `--pixamind-events` | `PIXAMIND_EVENTS` | false | event outbox |
 | `--pixamind-events-retention-days` | `PIXAMIND_EVENTS_RETENTION_DAYS` | 30 | 0 = keep all |
 | `--pixamind-telemetry` | `PIXAMIND_TELEMETRY` | true | per-batch telemetry |
+| `--pixamind-feed-cache` | `PIXAMIND_FEED_CACHE` | true | shared feeds cache ([FEED-CACHE.md](FEED-CACHE.md)) |
 | `--prometheus-port` | `PROMETHEUS_PORT` | — | expose Prometheus metrics (inherited option) |
 | `--community-start-block` | `COMMUNITY_START_BLOCK` | 1 | |
 | — | `PIXAMIND_CHAIN` | pixa | `hive` for Hive data (API test suite) |
 
 Chain symbol and correction overrides are listed in [MIGRATION.md](MIGRATION.md).
+
+## JIT
+
+PostgreSQL's JIT compiles a query to machine code when its estimated cost passes
+`jit_above_cost`. Many of hivemind's queries pass it, and for them the compilation (tens
+to hundreds of milliseconds) costs more than it saves: the code is thrown away after one
+execution. JIT is off at two levels:
+
+* **API calls**, always: every function of `hivemind_endpoints` — the schema PostgREST
+  and `pixamind-api` call — carries `SET jit = off` (`home.sql`, and
+  `pixamind/sql/runtime/95_jit.sql` for the others, re-applied on every start). This
+  holds whatever the server, database or role settings say.
+* **The whole database**, for the indexer: `scripts/install_app.sql` runs
+  `ALTER DATABASE … SET jit = off`, and the schema upgrade refuses a database without it.
+  That setting is lost when a dump is restored into a new database: the indexer then
+  logs `JIT is on for the indexer's database sessions` at start. Restore it as the
+  database owner:
+
+  ```sql
+  ALTER DATABASE haf_block_log SET jit = off;   -- new sessions; restart the indexer
+  ```
+
+`pixamind_api.get_info` reports both (`database.jit`: `api` is always `off`,
+`database` is the database-level setting); `pixamind info` prints a `JIT` line.
 
 ## Watching it
 
@@ -51,6 +76,9 @@ Telemetry is kept 7 days in `pixamind.sync_batches` (one row per live block).
 | `pixamind_events_written_total` | counter | |
 | `pixamind_promotions_indexed_total` | counter | |
 | `pixamind_projection_failures_total` | counter | alert on increase |
+| `pixamind_feed_cache_refresh_seconds` | histogram | shared feeds cache: refresh after a live block |
+| `pixamind_feed_cache_rewritten_total` | counter | cached feeds that changed |
+| `pixamind_feed_cache_failures_total` | counter | targets not computed, failed refreshes |
 
 Plus the inherited `hivemind_sync_current_block_blocks` gauge. Useful alerts:
 

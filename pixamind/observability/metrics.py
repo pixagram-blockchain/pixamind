@@ -15,6 +15,9 @@ next to nothing.
     pixamind_events_written_total                    event outbox rows written
     pixamind_promotions_indexed_total                promotion payments indexed
     pixamind_projection_failures_total               Pixamind projection steps that failed
+    pixamind_feed_cache_refresh_seconds              shared feeds cache: refresh after a live block (histogram)
+    pixamind_feed_cache_rewritten_total              shared feeds cache: results that changed
+    pixamind_feed_cache_failures_total               shared feeds cache: targets not computed, failed refreshes
 """
 
 from __future__ import annotations
@@ -48,6 +51,13 @@ if _AVAILABLE:
     EVENTS = Counter('pixamind_events_written', 'Event outbox rows written')
     PROMOTIONS = Counter('pixamind_promotions_indexed', 'Promotion payments indexed')
     FAILURES = Counter('pixamind_projection_failures', 'Pixamind projection steps that failed')
+    FEED_CACHE_SECONDS = Histogram(
+        'pixamind_feed_cache_refresh_seconds', 'Shared feeds cache: refresh after a live block', buckets=_BATCH_BUCKETS
+    )
+    FEED_CACHE_REWRITTEN = Counter('pixamind_feed_cache_rewritten', 'Shared feeds cache: results that changed')
+    FEED_CACHE_FAILURES = Counter(
+        'pixamind_feed_cache_failures', 'Shared feeds cache: targets that could not be computed, and failed refreshes'
+    )
 
 
 def set_build_info(version: str, hivemind_base: str, chain: str) -> None:
@@ -80,3 +90,20 @@ def observe_batch(mode: str, first_block: int, last_block: int, seconds: float, 
 def count_failure() -> None:
     if _AVAILABLE:
         FAILURES.inc()
+
+
+def observe_feed_cache(seconds: float, summary: dict | None) -> None:
+    """Record one refresh of the shared feeds cache (summary None: the refresh failed). Never raises."""
+    if not _AVAILABLE:
+        return
+    try:
+        if summary is None:
+            FEED_CACHE_FAILURES.inc()
+            return
+        if summary.get('skipped'):  # catching up: nothing was computed
+            return
+        FEED_CACHE_SECONDS.observe(max(seconds, 0.0))
+        FEED_CACHE_REWRITTEN.inc(max(int(summary.get('changed', 0) or 0), 0))
+        FEED_CACHE_FAILURES.inc(max(int(summary.get('failed', 0) or 0), 0))
+    except Exception:  # noqa: BLE001 - metrics must never break indexing
+        log.debug('Could not record feed cache metrics', exc_info=True)

@@ -3,7 +3,9 @@
 After hivemind has processed a massive-sync batch, or a live block, the sync
 loop calls ``PixamindHooks.after_massive_batch`` / ``after_live_block``. They
 run ``pixamind.after_batch`` (promotions, event outbox, telemetry) on the
-connection that processed the batch and feed Prometheus.
+connection that processed the batch and feed Prometheus. Once a live block has
+committed, ``after_live_commit`` refreshes the shared feeds cache
+(docs/pixamind/FEED-CACHE.md).
 
 Guarantees:
 * Live: runs inside the block's transaction, under a SAVEPOINT, so Pixamind's
@@ -11,6 +13,9 @@ Guarantees:
   the block.
 * Massive: runs in its own transaction after hivemind's phases; replayed with
   the batch after a crash (every step is idempotent).
+* Shared feeds cache: refreshed after the block's COMMIT, in its own
+  transaction, so it never delays the block; rows are tagged with the block
+  they were computed at and the API ignores rows of any other block.
 * Any failure is logged and counted; the social indexer keeps going.
 """
 
@@ -26,15 +31,18 @@ from pixamind.observability import metrics
 log = logging.getLogger(__name__)
 
 AFTER_BATCH_SIGNATURE = 'pixamind.after_batch(text,integer,integer,real,jsonb,jsonb)'
+FEED_CACHE_SIGNATURE = 'pixamind.refresh_feed_cache(integer)'
 
 
 class PixamindHooks:
     """Process-wide state of the Pixamind hooks (one sync process per database)."""
 
     enabled = False
+    feed_cache = False
     settings = PixamindSettings()
     events_min_block = 0
     _consecutive_errors = 0
+    _feed_cache_errors = 0
 
     @classmethod
     def configure(cls, conf, db, settings: PixamindSettings | None = None) -> None:
@@ -43,23 +51,30 @@ class PixamindHooks:
             cls.settings = settings
         else:
             cls.settings = PixamindSettings.from_conf(conf) if conf is not None else PixamindSettings()
+        cls.feed_cache = False
         try:
             from hive.utils.chain import CHAIN
             from pixamind.version import HIVEMIND_BASE, VERSION
 
             metrics.set_build_info(VERSION, HIVEMIND_BASE, CHAIN)
             cls._warn_if_forking(db)
+            cls._warn_if_jit(db)
             installed = db.query_one(f"SELECT to_regprocedure('{AFTER_BATCH_SIGNATURE}') IS NOT NULL")
             if not installed:
-                log.warning('Pixamind schema is not installed: promotions, events and telemetry are off for this run')
+                log.warning(
+                    'Pixamind schema is not installed: promotions, events, telemetry and the feed cache '
+                    'are off for this run'
+                )
                 cls.enabled = False
                 return
             s = cls.settings
+            feed_cache = cls._reset_feed_cache(db, s.feed_cache)
             for name, value in (
                 ('events', s.events),
                 ('events_keep_blocks', s.events_keep_blocks),
                 ('promotions', s.promotions),
                 ('telemetry', s.telemetry),
+                ('feed_cache', feed_cache),
             ):
                 db.query_no_return('SELECT pixamind.set_setting(:name, :value)', name=name, value=str(value).lower())
             if s.events and s.events_keep_blocks > 0:
@@ -68,17 +83,39 @@ class PixamindHooks:
             else:
                 cls.events_min_block = 0
             cls.enabled = s.events or s.promotions or s.telemetry
+            cls.feed_cache = feed_cache
             log.info(
-                'Pixamind hooks: promotions=%s events=%s (from block %s, keep %s blocks) telemetry=%s',
+                'Pixamind hooks: promotions=%s events=%s (from block %s, keep %s blocks) telemetry=%s feed_cache=%s',
                 s.promotions,
                 s.events,
                 cls.events_min_block,
                 s.events_keep_blocks,
                 s.telemetry,
+                feed_cache,
             )
         except Exception:
             log.exception('Could not configure the Pixamind hooks; they are off for this run')
             cls.enabled = False
+            cls.feed_cache = False
+
+    @staticmethod
+    def _reset_feed_cache(db, wanted: bool) -> bool:
+        """Empty the shared feeds cache; returns whether it is on for this run.
+
+        Rows are only ever written by this process's live refreshes: a previous run may
+        have ended before a rewind of the context, a resync or edits by hand.
+        """
+        try:
+            if not db.query_one(f"SELECT to_regprocedure('{FEED_CACHE_SIGNATURE}') IS NOT NULL"):
+                if wanted:
+                    log.warning('The shared feeds cache is not installed: it is off for this run')
+                return False
+            db.query_no_return('SELECT pixamind.clear_feed_cache()')
+        except Exception:
+            # rows of an earlier run stay, but match only until the next block is indexed
+            log.exception('Could not empty the shared feeds cache: it is off for this run')
+            return False
+        return wanted
 
     @staticmethod
     def _warn_if_forking(db) -> None:
@@ -92,6 +129,22 @@ class PixamindHooks:
             log.warning(
                 'The hivemind_app HAF context is still forking (set up by an earlier build): '
                 'run setup once to switch it to non-forking, or resync (docs/pixamind/MIGRATION.md)'
+            )
+
+    @staticmethod
+    def _warn_if_jit(db) -> None:
+        """API calls run with JIT off whatever the settings (every function of
+        hivemind_endpoints carries `SET jit = off`); the indexer's own sessions rely on
+        the database-level setting written by scripts/install_app.sql."""
+        try:
+            jit = db.query_one("SELECT current_setting('jit')")
+        except Exception:  # informational only
+            return
+        if str(jit).lower() == 'on':
+            log.warning(
+                "JIT is on for the indexer's database sessions: as the database owner run "
+                "`ALTER DATABASE <database> SET jit = off` (scripts/install_app.sql does it), "
+                'see docs/pixamind/OPERATIONS.md'
             )
 
     @classmethod
@@ -165,6 +218,39 @@ class PixamindHooks:
         summary = cls._guarded_call(db, 'live', first, last, seconds, {})
         if summary is not None:
             cls._report('live', first, last, seconds, {}, summary)
+
+    @classmethod
+    def after_live_commit(cls, db, first: int, last: int) -> None:
+        """Right after a live block's COMMIT: recompute the shared feeds cache for the new
+        block, in a transaction of its own. The block is already visible, so the cache
+        never delays it; until this commits the API computes those feeds itself (rows of
+        the previous block are no longer served). Never raises."""
+        if not cls.feed_cache or db.is_trx_active():
+            return
+        t0 = perf_counter()
+        try:
+            db.query_no_return('START TRANSACTION')
+            summary = db.query_one('SELECT pixamind.refresh_feed_cache()')
+            db.query_no_return('COMMIT')
+        except Exception:
+            try:
+                db.query_no_return('ROLLBACK')
+            except Exception:  # noqa: BLE001 - a dead connection surfaces in the sync loop
+                pass
+            cls._feed_cache_errors += 1
+            metrics.observe_feed_cache(perf_counter() - t0, None)
+            log.warning(
+                'Pixamind: shared feeds cache not refreshed for blocks %d-%d (the API computes those feeds)',
+                first,
+                last,
+                exc_info=cls._feed_cache_errors == 1,
+            )
+            return
+        cls._feed_cache_errors = 0
+        summary = summary if isinstance(summary, dict) else {}
+        seconds = perf_counter() - t0
+        metrics.observe_feed_cache(seconds, summary)
+        log.debug('Pixamind: feed cache for block %s refreshed in %.3fs: %s', summary.get('block'), seconds, summary)
 
     @classmethod
     def after_massive_batch(cls, db, first: int, last: int, phases: dict) -> float:

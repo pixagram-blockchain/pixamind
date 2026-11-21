@@ -82,13 +82,16 @@ BEGIN
       'liquid_symbol', '{{HIVE_SYMBOL}}', 'stable_symbol', '{{HBD_SYMBOL}}', 'vests_symbol', '{{VESTS_SYMBOL}}'),
     'database', jsonb_build_object(
       'app_schema', 'hivemind_app', 'endpoints_schema', 'hivemind_endpoints',
-      'pixamind_schema', 'pixamind', 'pixamind_migration', _migration),
+      'pixamind_schema', 'pixamind', 'pixamind_migration', _migration,
+      'jit', pixamind.jit_state()),
     'context', pixamind.context_state(),
     'features', jsonb_build_object(
       'events', pixamind.get_setting('events', 'false')::BOOLEAN,
       'events_keep_blocks', pixamind.get_setting('events_keep_blocks', '0')::INT,
       'promotions', pixamind.get_setting('promotions', 'true')::BOOLEAN,
-      'telemetry', pixamind.get_setting('telemetry', 'true')::BOOLEAN),
+      'telemetry', pixamind.get_setting('telemetry', 'true')::BOOLEAN,
+      'feed_cache', pixamind.get_setting('feed_cache', 'false')::BOOLEAN),
+    'feed_cache', pixamind.feed_cache_state(),
     'event_types', pixamind.event_types(),
     'namespaces', '["pixamind_api", "pixamind_content", "pixamind_graph", "pixamind_feed"]'::JSONB
   );
