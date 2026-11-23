@@ -53,7 +53,7 @@ No parameters.
  "context": {"processed_block": 1234566, "irreversible_block": 1234566, "estimated_head_block": 1234567,
              "stage": "live", "forking": false, "processed_block_age_seconds": 2.1},
  "features": {"events": true, "events_keep_blocks": 864000, "promotions": true, "telemetry": true,
-              "feed_cache": true},
+              "feed_cache": true, "post_history": true, "post_history_backfilled": true},
  "feed_cache": {"enabled": true, "targets": 6, "fresh": 6, "failing": 0, "block": 1234566, "size_bytes": 196608},
  "event_types": ["vote", "post_created", "…"],
  "namespaces": ["pixamind_api", "pixamind_content", "pixamind_graph", "pixamind_feed"]}
@@ -134,6 +134,22 @@ Read from the post's `json_metadata` and the header of the base64 picture in its
 (PNG, GIF, WebP VP8/VP8L/VP8X): width and height come without decoding the image, so a
 masonry feed can reserve space before loading it. `ai_used` appears when the author
 declared an AI tool (`json_metadata.ai`).
+
+### `get_post_history`
+
+`{"author": "bob", "permlink": "blog-1", "start": 1, "limit": 20, "bodies": true}` →
+every version of a post or comment, oldest first: the creation, then each edit, with
+block, timestamp, HAF operation id, the fields that changed, and the full title, body
+and json_metadata (`bodies: false` leaves out the bodies). See
+[POST-HISTORY.md](POST-HISTORY.md).
+
+```json
+{"author": "bob", "permlink": "blog-1", "total": 2, "complete": true,
+ "versions": [{"version": 1, "block_num": 2, "timestamp": "…", "op_id": "8589935361", "created": true,
+               "changed": ["title", "body", "json_metadata"], "title": "Hello", "body": "First post", "json_metadata": "…"},
+              {"version": 2, "block_num": 9, "timestamp": "…", "op_id": "38654705921", "created": false,
+               "changed": ["body"], "title": "Hello", "body": "Final post", "json_metadata": "…"}]}
+```
 
 ## `pixamind_graph`
 

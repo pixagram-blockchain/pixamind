@@ -30,6 +30,7 @@ from hive.utils.communities_rank import update_communities_posts_and_rank
 from hive.utils.payout_stats import PayoutStats
 from hive.utils.stats import OPStatusManager as OPSM
 from hive.utils.timer import time_it
+from pixamind.indexer.history import PostHistory
 from pixamind.indexer.hooks import PixamindHooks
 
 log = logging.getLogger(__name__)
@@ -492,7 +493,10 @@ class Blocks:
                 new_json = op_body.get('json_metadata') if op_body.get('json_metadata') else None
                 post_data = dict(title=new_title, body=new_body, json=new_json, is_root='false')
 
+            PostHistory.add(r, post_data)  # Pixamind: every version of the post (pixamind/indexer/history.py)
             PostDataCache.add_data(post_id, post_data, is_new)
+
+        PostHistory.flush(PostDataCache.db)
 
     @staticmethod
     def _run_parallel_sql(tasks, max_retries=3):

@@ -165,7 +165,8 @@ docs/pixamind/        this documentation
 
 Upstream files touched by Pixamind are few and marked with `Pixamind` comments:
 `hive/conf.py`, `hive/db/schema.py`, `hive/db/db_state.py`, `hive/indexer/blocks.py`
-(the hooks after each batch, live block and live COMMIT), `hive/indexer/sync.py`,
+(the hooks after each batch, live block and live COMMIT, and where each comment operation
+is merged, for the post history), `hive/indexer/sync.py`,
 `hive/indexer/community.py`, `hive/utils/chain.py`, and in SQL `massive_sync.sql`,
 `assets_operations.sql`, `dispatch.sql`, `get_api_method.sql`, `home.sql` (Pixamind
 methods, `SET jit = off`, the shared feeds cache lookup), `bridge_api_get_ranked_posts.sql`.

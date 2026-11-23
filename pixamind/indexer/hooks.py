@@ -26,11 +26,13 @@ import logging
 from time import perf_counter
 
 from pixamind.conf import PixamindSettings
+from pixamind.indexer.history import PostHistory
 from pixamind.observability import metrics
 
 log = logging.getLogger(__name__)
 
 AFTER_BATCH_SIGNATURE = 'pixamind.after_batch(text,integer,integer,real,jsonb,jsonb)'
+POST_HISTORY_SIGNATURE = 'pixamind.write_post_versions(jsonb)'
 FEED_CACHE_SIGNATURE = 'pixamind.refresh_feed_cache(integer)'
 
 
@@ -52,6 +54,7 @@ class PixamindHooks:
         else:
             cls.settings = PixamindSettings.from_conf(conf) if conf is not None else PixamindSettings()
         cls.feed_cache = False
+        PostHistory.enabled = False
         try:
             from hive.utils.chain import CHAIN
             from pixamind.version import HIVEMIND_BASE, VERSION
@@ -69,12 +72,16 @@ class PixamindHooks:
                 return
             s = cls.settings
             feed_cache = cls._reset_feed_cache(db, s.feed_cache)
+            post_history = s.post_history and bool(
+                db.query_one(f"SELECT to_regprocedure('{POST_HISTORY_SIGNATURE}') IS NOT NULL")
+            )
             for name, value in (
                 ('events', s.events),
                 ('events_keep_blocks', s.events_keep_blocks),
                 ('promotions', s.promotions),
                 ('telemetry', s.telemetry),
                 ('feed_cache', feed_cache),
+                ('post_history', post_history),
             ):
                 db.query_no_return('SELECT pixamind.set_setting(:name, :value)', name=name, value=str(value).lower())
             if s.events and s.events_keep_blocks > 0:
@@ -84,19 +91,31 @@ class PixamindHooks:
                 cls.events_min_block = 0
             cls.enabled = s.events or s.promotions or s.telemetry
             cls.feed_cache = feed_cache
+            PostHistory.enabled = post_history
             log.info(
-                'Pixamind hooks: promotions=%s events=%s (from block %s, keep %s blocks) telemetry=%s feed_cache=%s',
+                'Pixamind hooks: promotions=%s events=%s (from block %s, keep %s blocks) telemetry=%s feed_cache=%s '
+                'post_history=%s',
                 s.promotions,
                 s.events,
                 cls.events_min_block,
                 s.events_keep_blocks,
                 s.telemetry,
                 feed_cache,
+                post_history,
             )
+            if (
+                post_history
+                and db.query_one("SELECT pixamind.get_setting('post_history_backfilled', 'false')") != 'true'
+            ):
+                log.info(
+                    'Post history is recorded from now on; `pixamind history backfill` adds the versions '
+                    'from before (docs/pixamind/POST-HISTORY.md)'
+                )
         except Exception:
             log.exception('Could not configure the Pixamind hooks; they are off for this run')
             cls.enabled = False
             cls.feed_cache = False
+            PostHistory.enabled = False
 
     @staticmethod
     def _reset_feed_cache(db, wanted: bool) -> bool:
