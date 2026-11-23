@@ -6,7 +6,7 @@
 |---|---|---|---|
 | Unit tests | `tests/utils`, `tests/pixamind/test_tools.py`, `test_config.py` | Python | yes |
 | SQL harness | `tests/pixamind/test_content_metadata.py`, `test_install.py` | any PostgreSQL 14+ | yes |
-| End-to-end sync | `tests/pixamind/test_live_sync.py`, `test_massive_sync.py`, `test_integrity_tool.py`, `test_feed_cache.py` | PostgreSQL | yes |
+| End-to-end sync | `tests/pixamind/test_live_sync.py`, `test_massive_sync.py`, `test_integrity_tool.py`, `test_feed_cache.py`, `test_post_history.py` | PostgreSQL | yes |
 | API server | `crates/pixamind-api` (`cargo test`), `tests/pixamind/test_api_gateway.py` | PostgreSQL, the built binary; PostgREST 12.0.2 for the comparison | yes |
 | Inherited API suite (tavern) | `tests/api_tests/hivemind/tavern` | HAF with Hive's first 5M blocks + mocks | no (GitLab CI, `docker/docker-compose-*.yml`) |
 | Load tests (k6) | `tests/performance` | a synced node | manual |

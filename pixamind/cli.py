@@ -9,6 +9,7 @@ Operator tools:
     pixamind info         node, lag, throughput and latency of a running Pixamind API
     pixamind integrity    projection fingerprints of a database; compare two databases
     pixamind events       backfill the event outbox for a block range, or tail it
+    pixamind history      rebuild post and comment versions from HAF (backfill)
     pixamind corpus       build a request corpus (from the API test suite, or sampled from a node)
     pixamind apidiff      replay a corpus against two API nodes and report differences
     pixamind bench        latency percentiles and throughput of an API node for a corpus
@@ -24,6 +25,7 @@ TOOLS = {
     'info': 'pixamind.tools.info',
     'integrity': 'pixamind.tools.integrity',
     'events': 'pixamind.tools.events',
+    'history': 'pixamind.tools.history',
     'corpus': 'pixamind.tools.corpus',
     'apidiff': 'pixamind.tools.apidiff',
     'bench': 'pixamind.tools.bench',

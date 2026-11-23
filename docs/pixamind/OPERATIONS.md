@@ -16,11 +16,27 @@ and the API server; there is no extra service.
 | `--pixamind-events-retention-days` | `PIXAMIND_EVENTS_RETENTION_DAYS` | 30 | 0 = keep all |
 | `--pixamind-telemetry` | `PIXAMIND_TELEMETRY` | true | per-batch telemetry |
 | `--pixamind-feed-cache` | `PIXAMIND_FEED_CACHE` | true | shared feeds cache ([FEED-CACHE.md](FEED-CACHE.md)) |
+| `--pixamind-post-history` | `PIXAMIND_POST_HISTORY` | true | every version of posts and comments ([POST-HISTORY.md](POST-HISTORY.md)) |
 | `--prometheus-port` | `PROMETHEUS_PORT` | — | expose Prometheus metrics (inherited option) |
 | `--community-start-block` | `COMMUNITY_START_BLOCK` | 1 | |
 | — | `PIXAMIND_CHAIN` | pixa | `hive` for Hive data (API test suite) |
 
 Chain symbol and correction overrides are listed in [MIGRATION.md](MIGRATION.md).
+
+## Post history
+
+Every version of every post and comment is recorded in `pixamind.post_versions`
+([POST-HISTORY.md](POST-HISTORY.md)). On a node that indexed posts before this was
+installed, run once (safe while the indexer runs; the indexer logs a reminder at start
+until it is done):
+
+```bash
+pixamind history backfill --database-url postgresql://hivemind@localhost:5432/haf_block_log
+```
+
+It also repairs a range listed in `pixamind.projection_failures` under `post_versions`:
+`--from-block N`. Storage: only edited posts cost anything beyond a small row per post
+(an edit stores only the fields it changed, plus the original text once).
 
 ## JIT
 

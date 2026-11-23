@@ -4,6 +4,7 @@
 --   pixamind_api.get_metrics                indexer lag, throughput, block->API latency, failures
 --   pixamind_api.get_events                 the social event outbox, cursor-paged
 --   pixamind_content.get_content_metadata   artwork/post metadata (format, size, licence, AI disclosure)
+--   pixamind_content.get_post_history       every version of a post or comment (75_post_history.sql)
 --   pixamind_graph.get_mutual_follows       accounts an account follows that follow it back
 --   pixamind_graph.get_relationships        one observer against up to 100 accounts, in one call
 --   pixamind_feed.get_promoted_posts        the promoted feed (same as bridge.get_ranked_posts sort=promoted)
@@ -90,7 +91,9 @@ BEGIN
       'events_keep_blocks', pixamind.get_setting('events_keep_blocks', '0')::INT,
       'promotions', pixamind.get_setting('promotions', 'true')::BOOLEAN,
       'telemetry', pixamind.get_setting('telemetry', 'true')::BOOLEAN,
-      'feed_cache', pixamind.get_setting('feed_cache', 'false')::BOOLEAN),
+      'feed_cache', pixamind.get_setting('feed_cache', 'false')::BOOLEAN,
+      'post_history', pixamind.get_setting('post_history', 'false')::BOOLEAN,
+      'post_history_backfilled', pixamind.get_setting('post_history_backfilled', 'false')::BOOLEAN),
     'feed_cache', pixamind.feed_cache_state(),
     'event_types', pixamind.event_types(),
     'namespaces', '["pixamind_api", "pixamind_content", "pixamind_graph", "pixamind_feed"]'::JSONB
@@ -533,6 +536,7 @@ BEGIN
     WHEN 'pixamind_api.get_metrics' THEN RETURN pixamind.api_get_metrics(_params);
     WHEN 'pixamind_api.get_events' THEN RETURN pixamind.api_get_events(_params);
     WHEN 'pixamind_content.get_content_metadata' THEN RETURN pixamind.api_get_content_metadata(_params);
+    WHEN 'pixamind_content.get_post_history' THEN RETURN pixamind.api_get_post_history(_params);
     WHEN 'pixamind_graph.get_mutual_follows' THEN RETURN pixamind.api_get_mutual_follows(_params);
     WHEN 'pixamind_graph.get_relationships' THEN RETURN pixamind.api_get_relationships(_params);
     WHEN 'pixamind_feed.get_promoted_posts' THEN RETURN pixamind.api_get_promoted_posts(_params);

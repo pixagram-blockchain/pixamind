@@ -8,6 +8,7 @@ work with `pixamind sync`, `hive sync` and the docker entrypoint alike:
     --pixamind-promotions / PIXAMIND_PROMOTIONS                 promoted posts (default on)
     --pixamind-telemetry / PIXAMIND_TELEMETRY                   per-batch telemetry (default on)
     --pixamind-feed-cache / PIXAMIND_FEED_CACHE                 shared feeds cache (default on)
+    --pixamind-post-history / PIXAMIND_POST_HISTORY             every version of posts and comments (default on)
 """
 
 from __future__ import annotations
@@ -56,6 +57,13 @@ def add_arguments(add) -> None:
         default=True,
         help='compute the observer-less feeds of pixamind.feed_cache_targets once per block (docs/pixamind/FEED-CACHE.md)',
     )
+    add(
+        '--pixamind-post-history',
+        type=strtobool,
+        env_var='PIXAMIND_POST_HISTORY',
+        default=True,
+        help='record every version of posts and comments (docs/pixamind/POST-HISTORY.md)',
+    )
 
 
 @dataclass(frozen=True)
@@ -65,6 +73,7 @@ class PixamindSettings:
     promotions: bool = True
     telemetry: bool = True
     feed_cache: bool = True
+    post_history: bool = True
 
     @property
     def events_keep_blocks(self) -> int:
@@ -86,4 +95,5 @@ class PixamindSettings:
             promotions=bool(get('pixamind_promotions', cls.promotions)),
             telemetry=bool(get('pixamind_telemetry', cls.telemetry)),
             feed_cache=bool(get('pixamind_feed_cache', cls.feed_cache)),
+            post_history=bool(get('pixamind_post_history', cls.post_history)),
         )

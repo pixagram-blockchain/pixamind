@@ -22,6 +22,7 @@ can be rebuilt from them.
 | **Event outbox** | A cursor-paged, fork-safe stream of social events (`pixamind_api.get_events`) for Pixagram Search, the Control Tower and other services. [→](docs/pixamind/EVENTS.md) |
 | **Artwork metadata** | Format, pixel size, animation, licence and AI disclosure of each post, read from chain data (`pixamind_content.get_content_metadata`). [→](docs/pixamind/API.md#pixamind_content) |
 | **Shared feeds cache** | The feeds every visitor gets alike (trending, hot, new, promoted first pages) are computed once per block and answered from a table, byte-identical, never older than the block the API is at. [→](docs/pixamind/FEED-CACHE.md) |
+| **Post and comment history** | Every version of every post and comment (creation and each edit, diff patches applied like hivemind), with what changed: `pixamind_content.get_post_history`. [→](docs/pixamind/POST-HISTORY.md) |
 | **No JIT in API calls** | Every API function runs with `jit = off`, whatever the database settings: no LLVM compilation on feed queries. [→](docs/pixamind/OPERATIONS.md#jit) |
 | **Engine health** | Lag, throughput, block-to-API latency, per-phase timings: `pixamind_api.get_metrics` and Prometheus. [→](docs/pixamind/OPERATIONS.md) |
 | **Integrity and differential testing** | Projection fingerprints to prove two databases agree; API diff and benchmark tools; a SQL test harness that runs the real indexer without a HAF node. [→](docs/pixamind/TESTING.md) |
@@ -97,6 +98,7 @@ first: names, defaults, and why a resync is recommended.
 | `--pixamind-events-retention-days` | `PIXAMIND_EVENTS_RETENTION_DAYS` | `30` | |
 | `--pixamind-telemetry` | `PIXAMIND_TELEMETRY` | `true` | |
 | `--pixamind-feed-cache` | `PIXAMIND_FEED_CACHE` | `true` | shared feeds cache |
+| `--pixamind-post-history` | `PIXAMIND_POST_HISTORY` | `true` | every version of posts and comments |
 | `--prometheus-port` | `PROMETHEUS_PORT` | | metrics endpoint |
 | `--community-start-block` | `COMMUNITY_START_BLOCK` | `1` | |
 | | `PIXAMIND_CHAIN` | `pixa` | `hive` reproduces Hivemind on Hive data |
@@ -148,7 +150,7 @@ in the [upstream README](docs/hivemind/README.md).
 * [Architecture](docs/pixamind/ARCHITECTURE.md) — the system as built, findings, guarantees
 * [Roadmap](docs/pixamind/ROADMAP.md) — the modernization plan against the code
 * [Migration](docs/pixamind/MIGRATION.md) — from `pixagram-blockchain/hivemind`
-* [API](docs/pixamind/API.md) · [Events](docs/pixamind/EVENTS.md) · [Promoted posts](docs/pixamind/PROMOTED_POSTS.md) · [Shared feeds cache](docs/pixamind/FEED-CACHE.md)
+* [API](docs/pixamind/API.md) · [Events](docs/pixamind/EVENTS.md) · [Promoted posts](docs/pixamind/PROMOTED_POSTS.md) · [Shared feeds cache](docs/pixamind/FEED-CACHE.md) · [Post history](docs/pixamind/POST-HISTORY.md)
 * [API server in Rust](docs/pixamind/API-SERVER.md) — `pixamind-api`, in place of PostgREST and nginx
 * [Operations](docs/pixamind/OPERATIONS.md) · [Testing and benchmarks](docs/pixamind/TESTING.md)
 * Upstream: [Hivemind README](docs/hivemind/README.md), [communities](docs/communities.md), [follows](docs/follows.md)

@@ -58,7 +58,7 @@ pixamind sync --database-url=postgresql://hivemind@localhost:5432/haf_block_log 
   --reptracker-schema-name=reptracker_app [--test-max-block=N] [--pixamind-events true]
 
 # operator tools
-pixamind info | integrity | events | corpus | apidiff | bench | sync-report   (--help each)
+pixamind info | integrity | events | history | corpus | apidiff | bench | sync-report   (--help each)
 ```
 
 Docker: `docker build -t pixadock/pixamind:local .`; entrypoint commands `setup`,
