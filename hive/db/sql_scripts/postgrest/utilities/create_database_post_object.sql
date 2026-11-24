@@ -40,7 +40,7 @@ BEGIN
     'parent_author', _row.parent_author,
     'parent_permlink', _row.parent_permlink_or_category,
     'beneficiaries', _row.beneficiaries,
-    'percent_hbd', _row.percent_hbd,
+    '{{PERCENT_HBD_FIELD}}', _row.percent_hbd, -- Pixamind: percent_pxs on Pixa
     'net_votes', _row.net_votes
   );
 
@@ -65,6 +65,9 @@ BEGIN
     _result = jsonb_set(_result, '{children_abs_rshares}', to_jsonb(0));
     _result = jsonb_set(_result, '{net_rshares}', hivemind_app.json_stringify_numeric(_row.rshares));
   END IF;
+
+  -- Pixamind: whether the post is minted as an NFT (pixamind/sql/runtime/55_nft.sql)
+  _result = _result || jsonb_build_object('nft_minted', pixamind.nft_minted(_row.author, _row.permlink));
 
   RETURN _result;
 END

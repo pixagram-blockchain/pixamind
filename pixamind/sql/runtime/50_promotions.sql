@@ -4,8 +4,16 @@
 -- to @null with the memo "@author/permlink". The chain burns what @null
 -- receives, so promoting needs no consensus change: it is an indexer feature.
 -- Steem's hivemind had it; Hive removed it from hivemind in January 2025;
--- Pixamind restores it with the same rules (stable token only, exact memo
--- format, unpaid posts only in the feed).
+-- Pixamind restores it with the same rules:
+--   * transfer_operation only, to null, in the stable token only;
+--   * the memo is exactly "@author/permlink", nothing before or after it;
+--   * the target is a root post that is not deleted and was created in that
+--     block or earlier (the rule votes follow, so a batch of 1,000 blocks
+--     counts a burn the same way as block by block);
+--   * every burn on a post adds up, whoever sent it; the post is listed until
+--     its payout and keeps its total afterwards.
+-- A burn that matches no such post is recorded with post_id NULL: it ranks
+-- nothing. Every bridge and condenser post object carries `promoted`.
 
 -- Index the promotions of blocks [_first, _last] and refresh the totals of the
 -- posts they touch. Returns the number of promotion payments found.
@@ -25,7 +33,7 @@ BEGIN
   WITH payments AS (
     SELECT ho.id, ho.block_num,
            ho.body_value->>'from' AS sender,
-           btrim(ho.body_value->>'memo') AS memo,
+           ho.body_value->>'memo' AS memo,
            pixamind.nai_value(ho.body_value->'amount') AS amount
     FROM hivemind_app.operations_view ho
     WHERE ho.block_num BETWEEN _first AND _last
@@ -45,7 +53,9 @@ BEGIN
               FROM hivemind_app.hive_posts hp
               JOIN hivemind_app.hive_accounts ha ON ha.id = hp.author_id
               JOIN hivemind_app.hive_permlink_data hpd ON hpd.id = hp.permlink_id
-             WHERE ha.name = pa.author AND hpd.permlink = pa.permlink AND hp.counter_deleted = 0),
+             WHERE ha.name = pa.author AND hpd.permlink = pa.permlink AND hp.counter_deleted = 0
+               AND hp.depth = 0                                -- root posts only
+               AND hp.block_num_created <= pa.block_num),      -- created in that block or earlier
            pa.amount
     FROM parsed pa
     JOIN hivemind_app.blocks_view b ON b.num = pa.block_num
@@ -66,6 +76,12 @@ BEGIN
   RETURN _count;
 END
 $$;
+
+-- The promoted total of a post as every post object shows it, "0.000 PXS" when nothing was burned
+-- for it (Steem's hivemind printed the field the same way).
+CREATE OR REPLACE FUNCTION pixamind.post_promoted(_post_id INT)
+RETURNS TEXT LANGUAGE sql STABLE AS
+$$ SELECT pixamind.stable_amount_text((SELECT pp.promoted FROM pixamind.promoted_posts pp WHERE pp.post_id = _post_id)) $$;
 
 -- Promotion events for blocks [_first, _last] (only when the event outbox is on).
 CREATE OR REPLACE FUNCTION pixamind.emit_promotion_events(_first INT, _last INT, _min_block INT DEFAULT 0)
@@ -92,9 +108,11 @@ BEGIN
 END
 $$;
 
--- Posts ranked by promotion, as bridge (or condenser) post objects with a
--- "promoted" amount. _tag: NULL/''/'all', a community name, or a tag.
--- Paging: start from the post after _post_id (0 = from the top).
+-- Posts ranked by promotion, highest total first and the newest post first on
+-- a tie, as bridge (or condenser) post objects, which carry the "promoted"
+-- amount. _tag: NULL/''/'all', a community name, a tag, or 'my' for the
+-- communities the observer subscribes to. Paging: start from the post after
+-- _post_id (0 = from the top).
 CREATE OR REPLACE FUNCTION pixamind.get_promoted_ranked_posts(
     _post_id INT, _observer_id INT, _limit INT, _truncate_body INT, _tag TEXT,
     _called_from_bridge_api BOOLEAN, _muted_reasons_filter_mask INT DEFAULT NULL
@@ -105,6 +123,7 @@ DECLARE
   _promoted_limit NUMERIC;
   _community_id INT;
   _tag_id INT;
+  _my BOOLEAN := COALESCE(_tag = 'my', FALSE);
   _result JSONB;
 BEGIN
   IF _post_id <> 0 THEN
@@ -114,7 +133,7 @@ BEGIN
     END IF;
   END IF;
 
-  IF _tag IS NOT NULL AND _tag <> '' AND _tag <> 'all' THEN
+  IF _tag IS NOT NULL AND _tag <> '' AND _tag <> 'all' AND NOT _my THEN
     IF hivemind_postgrest_utilities.check_community(_tag) THEN
       _community_id := hivemind_postgrest_utilities.find_community_id(_tag, True);
     ELSE
@@ -128,7 +147,7 @@ BEGIN
          WHEN _called_from_bridge_api
            THEN hivemind_postgrest_utilities.create_bridge_post_object(_observer_id, row, _truncate_body, NULL, row.is_pinned, True)
          ELSE hivemind_postgrest_utilities.create_condenser_post_object(_observer_id, row, _truncate_body, False)
-       END) || jsonb_build_object('promoted', pixamind.stable_amount_text(row.promoted))
+       END)
       ORDER BY row.promoted DESC, row.id DESC
     )
     FROM (
@@ -137,9 +156,12 @@ BEGIN
         FROM pixamind.promoted_posts pp
         JOIN hivemind_app.live_posts_view hp ON hp.id = pp.post_id
         WHERE NOT hp.is_paidout
+          AND hp.depth = 0
           AND pp.promoted > 0
           AND (_post_id = 0 OR pp.promoted < _promoted_limit OR (pp.promoted = _promoted_limit AND pp.post_id < _post_id))
           AND (_community_id IS NULL OR hp.community_id = _community_id)
+          AND (NOT _my OR hp.community_id IN (SELECT hs.community_id FROM hivemind_app.hive_subscriptions hs
+                                              WHERE hs.account_id = _observer_id))
           AND (_tag_id IS NULL OR EXISTS (SELECT 1 FROM hivemind_app.hive_post_tags hpt
                                           WHERE hpt.post_id = hp.id AND hpt.tag_id = _tag_id))
           AND (_observer_id = 0 OR NOT EXISTS (SELECT 1 FROM hivemind_app.muted_accounts_by_id_view

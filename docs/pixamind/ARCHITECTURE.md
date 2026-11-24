@@ -169,7 +169,11 @@ Upstream files touched by Pixamind are few and marked with `Pixamind` comments:
 is merged, for the post history), `hive/indexer/sync.py`,
 `hive/indexer/community.py`, `hive/utils/chain.py`, and in SQL `massive_sync.sql`,
 `assets_operations.sql`, `dispatch.sql`, `get_api_method.sql`, `home.sql` (Pixamind
-methods, `SET jit = off`, the shared feeds cache lookup), `bridge_api_get_ranked_posts.sql`.
+methods, `SET jit = off`, the shared feeds cache lookup), `bridge_api_get_ranked_posts.sql`, and
+`create_bridge_post_object.sql`, `create_condenser_post_object.sql`,
+`create_database_post_object.sql` (the `nft_minted` field of every post, [NFT.md](NFT.md); the
+bridge and condenser builders also add `promoted`, [PROMOTED_POSTS.md](PROMOTED_POSTS.md); all three
+name the PXS share `percent_pxs` on Pixa, [API.md](API.md#field-names-on-pixa)).
 
 ## 5. Guarantees of the Pixamind additions
 

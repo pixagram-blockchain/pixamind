@@ -35,8 +35,33 @@ REST endpoints (PostgREST, OpenAPI described in `hive/db/sql_scripts/endpoints`)
 | `condenser_api`/`tags_api.get_discussions_by_promoted` answer again | Steem-era method, same feed |
 | Amounts of posts with `comment_options` read `PXS`, not `HBD` | bug fix |
 | `rshares` of votes from Pixa's first ~905k blocks are no longer ×10⁶ | bug fix (after a resync) |
+| Every post object of the `bridge`, `condenser_api`, `tags_api` and `database_api` methods has `nft_minted` (true or false) | native NFTs, chain hardfork 32 ([NFT.md](NFT.md)) |
+| Every post object of the `bridge`, `condenser_api` and `tags_api` methods has `promoted` (`"0.000 PXS"` when nothing was burned for it), as on Steem | promoted posts ([PROMOTED_POSTS.md](PROMOTED_POSTS.md)) |
+| `bridge.get_ranked_posts` with `sort: "promoted"` takes `tag: "my"` (the observer's communities) | same scopes as the other sorts |
+| On Pixa, every post object names the share of the payout paid in PXS `percent_pxs` (Hivemind: `percent_hbd`) | the name Pixa's node uses ([below](#field-names-on-pixa)) |
 
 `pixamind apidiff` reports exactly these when a Pixamind node is compared with the old one.
+
+### Field names on Pixa
+
+From hardfork 32 code on (pixacore 1.32.0), Pixa's node names the PXS and PIXA fields of its
+operations after Pixa: `percent_pxs`, `pxs_payout`, `pixa_payout`, `reward_pixa`, and so on.
+HAF writes an operation's JSON with the names of the node code it is built from, so the same
+block reads `percent_hbd` through an earlier HAF build and `percent_pxs` through a new one.
+The indexer reads both names (`massive_sync.sql` for posts, the events projection for
+rewards), so a database synced across the upgrade needs nothing.
+
+What Pixamind answers does not depend on the HAF build:
+
+| Where | Name |
+|---|---|
+| Post objects of `bridge`, `condenser_api`, `tags_api`, `database_api` | `percent_pxs` with `PIXAMIND_CHAIN=pixa`, `percent_hbd` with `PIXAMIND_CHAIN=hive` (`PIXAMIND_PERCENT_HBD_FIELD` sets it) |
+| Column `hivemind_app.hive_posts.percent_hbd` | unchanged (compatibility) |
+| `author_reward` events | v1 keys unchanged: `hbd_payout`, `hive_payout` ([EVENTS.md](EVENTS.md)) |
+
+To compare with a node that answers `percent_hbd`, ignore both names at the depths the methods
+use, for example `--ignore result.percent_hbd --ignore result.percent_pxs --ignore 'result.*.percent_hbd'
+--ignore 'result.*.percent_pxs'`.
 
 ## `pixamind_api`
 
@@ -52,11 +77,11 @@ No parameters.
               "jit": {"api": "off", "database": "off"}},
  "context": {"processed_block": 1234566, "irreversible_block": 1234566, "estimated_head_block": 1234567,
              "stage": "live", "forking": false, "processed_block_age_seconds": 2.1},
- "features": {"events": true, "events_keep_blocks": 864000, "promotions": true, "telemetry": true,
+ "features": {"events": true, "events_keep_blocks": 864000, "promotions": true, "nfts": true, "telemetry": true,
               "feed_cache": true, "post_history": true, "post_history_backfilled": true},
  "feed_cache": {"enabled": true, "targets": 6, "fresh": 6, "failing": 0, "block": 1234566, "size_bytes": 196608},
  "event_types": ["vote", "post_created", "…"],
- "namespaces": ["pixamind_api", "pixamind_content", "pixamind_graph", "pixamind_feed"]}
+ "namespaces": ["pixamind_api", "pixamind_content", "pixamind_graph", "pixamind_feed", "pixamind_nft"]}
 ```
 
 `database.jit`: `api` is JIT inside API calls (always `off`, see
@@ -187,3 +212,9 @@ promotion first, each with `"promoted": "2.000 PXS"`.
 ```
 
 `{"sender": "dave", "limit": 100}` → what an account spent on promotion, newest first.
+
+## `pixamind_nft`
+
+Native NFTs (chain hardfork 32): `get_nfts`, `list_editions`, `list_created`, `list_owned`,
+`list_market`, `get_history`, `get_license`. An NFT is addressed as `@author/permlink/0` and its
+copy N (1 to 10,000) as `@author/permlink/N`. Parameters, answers and examples: [NFT.md](NFT.md).

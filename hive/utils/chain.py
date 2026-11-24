@@ -38,6 +38,10 @@ HIVE_SYMBOL: Final[str] = _env(("PIXAMIND_HIVE_SYMBOL", "HIVEMIND_HIVE_SYMBOL"),
 HBD_SYMBOL: Final[str] = _env(("PIXAMIND_HBD_SYMBOL", "HIVEMIND_HBD_SYMBOL"), "HBD" if _STEEM_HISTORY else "PXS")
 VESTS_SYMBOL: Final[str] = "VESTS"
 
+# Name of the post field that holds the share of the payout paid in the stable token: Pixa's node calls it
+# percent_pxs (from hardfork 32 code on), Hive percent_hbd.
+PERCENT_HBD_FIELD: Final[str] = _env(("PIXAMIND_PERCENT_HBD_FIELD",), "percent_hbd" if _STEEM_HISTORY else "percent_pxs")
+
 # Steem's HF1 (block 905,693, April 2016) rescaled rshares by 10^6; Hivemind
 # multiplies the rshares of votes cast before it. On a chain with its own genesis
 # those block numbers are the chain's first month, so the correction must be off
@@ -99,6 +103,7 @@ def sql_template_vars() -> dict[str, str]:
         "HIVE_SYMBOL": HIVE_SYMBOL,
         "HBD_SYMBOL": HBD_SYMBOL,
         "VESTS_SYMBOL": VESTS_SYMBOL,
+        "PERCENT_HBD_FIELD": PERCENT_HBD_FIELD,
         "LEGACY_RSHARES_UPSCALE_BEFORE_BLOCK": str(LEGACY_RSHARES_UPSCALE_BEFORE_BLOCK),
         "CURATION_REWARDS_PERCENT": str(CURATION_REWARDS_PERCENT),
     }

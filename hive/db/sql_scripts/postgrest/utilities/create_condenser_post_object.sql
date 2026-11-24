@@ -39,7 +39,7 @@ BEGIN
     'root_title', _row.root_title,
     'beneficiaries', _row.beneficiaries,
     'max_accepted_payout', _row.max_accepted_payout,
-    'percent_hbd', _row.percent_hbd,
+    '{{PERCENT_HBD_FIELD}}', _row.percent_hbd, -- Pixamind: percent_pxs on Pixa
     'active_votes', hivemind_postgrest_utilities.list_votes(_observer_id, _row.id, /* in python code it was hardcoded */ 1000,
                     'get_votes_for_posts'::hivemind_postgrest_utilities.list_votes_case, (SELECT CASE
                                                                                     WHEN _content_additions THEN 'active_votes'::hivemind_postgrest_utilities.vote_presentation
@@ -106,6 +106,11 @@ BEGIN
       _result = jsonb_set(_result, '{total_payout_value}', to_jsonb(_tmp_amount || ' ' || _tmp_currency));
     END IF;
   END IF;
+
+  -- Pixamind: whether the post is minted as an NFT (pixamind/sql/runtime/55_nft.sql)
+  _result = _result || jsonb_build_object('nft_minted', pixamind.nft_minted(_row.author, _row.permlink));
+  -- Pixamind: what was burned to promote the post (pixamind/sql/runtime/50_promotions.sql)
+  _result = _result || jsonb_build_object('promoted', pixamind.post_promoted(_row.id));
 
   RETURN _result;
 END

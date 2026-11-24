@@ -50,7 +50,7 @@ BEGIN
     'url', _row.url,
     'beneficiaries', _row.beneficiaries,
     'max_accepted_payout', _row.max_accepted_payout,
-    'percent_hbd', _row.percent_hbd,
+    '{{PERCENT_HBD_FIELD}}', _row.percent_hbd, -- Pixamind: percent_pxs on Pixa
     'json_metadata', _tmp_jsonb,
     'stats', jsonb_build_object(
               'hide', _row.is_hidden,
@@ -142,6 +142,11 @@ BEGIN
       RAISE EXCEPTION '%', hivemind_postgrest_utilities.raise_parameter_validation_exception('Replies argument in create_bridge_post_object is expected to be an array');
     END IF;
   END IF;
+
+  -- Pixamind: whether the post is minted as an NFT (pixamind/sql/runtime/55_nft.sql)
+  _result = _result || jsonb_build_object('nft_minted', pixamind.nft_minted(_row.author, _row.permlink));
+  -- Pixamind: what was burned to promote the post (pixamind/sql/runtime/50_promotions.sql)
+  _result = _result || jsonb_build_object('promoted', pixamind.post_promoted(_row.id));
 
   RETURN _result;
 END

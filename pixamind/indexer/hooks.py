@@ -79,6 +79,7 @@ class PixamindHooks:
                 ('events', s.events),
                 ('events_keep_blocks', s.events_keep_blocks),
                 ('promotions', s.promotions),
+                ('nfts', s.nfts),
                 ('telemetry', s.telemetry),
                 ('feed_cache', feed_cache),
                 ('post_history', post_history),
@@ -89,13 +90,14 @@ class PixamindHooks:
                 cls.events_min_block = max(irreversible - s.events_keep_blocks, 0)
             else:
                 cls.events_min_block = 0
-            cls.enabled = s.events or s.promotions or s.telemetry
+            cls.enabled = s.events or s.promotions or s.nfts or s.telemetry
             cls.feed_cache = feed_cache
             PostHistory.enabled = post_history
             log.info(
-                'Pixamind hooks: promotions=%s events=%s (from block %s, keep %s blocks) telemetry=%s feed_cache=%s '
-                'post_history=%s',
+                'Pixamind hooks: promotions=%s nfts=%s events=%s (from block %s, keep %s blocks) telemetry=%s '
+                'feed_cache=%s post_history=%s',
                 s.promotions,
+                s.nfts,
                 s.events,
                 cls.events_min_block,
                 s.events_keep_blocks,
@@ -171,6 +173,7 @@ class PixamindHooks:
         s = cls.settings
         return {
             'promotions': s.promotions,
+            'nfts': s.nfts,
             'events': s.events,
             'events_min_block': cls.events_min_block,
             'events_keep_blocks': s.events_keep_blocks,

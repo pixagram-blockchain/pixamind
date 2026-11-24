@@ -19,9 +19,12 @@ DELETE_COMMENT = 17
 CUSTOM_JSON = 18
 COMMENT_OPTIONS = 19
 ACCOUNT_UPDATE2 = 43
+NFT = 37  # nft_operation (hardfork 32); the number of the former reset_account_operation placeholder
 AUTHOR_REWARD = 51
 EFFECTIVE_COMMENT_VOTE = 72
 INEFFECTIVE_DELETE_COMMENT = 73
+NFT_SOLD = 93
+NFT_ROYALTY = 94
 
 STABLE_NAI = '@@000000013'
 LIQUID_NAI = '@@000000021'
@@ -77,7 +80,10 @@ def comment_options(
     *,
     max_accepted_payout: str = '1000000.000',
     beneficiaries: list[tuple[str, int]] | None = None,
+    percent: int = 10000,
+    pixa_names: bool = False,
 ) -> tuple[int, dict]:
+    """pixa_names: name the field percent_pxs, as a Pixa node with hardfork 32 code does (percent_hbd before)."""
     extensions = []
     if beneficiaries:
         extensions.append(
@@ -90,7 +96,7 @@ def comment_options(
         'author': author,
         'permlink': permlink,
         'max_accepted_payout': nai(max_accepted_payout),
-        'percent_hbd': 10000,
+        'percent_pxs' if pixa_names else 'percent_hbd': percent,
         'allow_votes': True,
         'allow_curation_rewards': True,
         'extensions': extensions,
@@ -154,15 +160,103 @@ def account_update2(account: str, posting_json_metadata: dict | None = None) -> 
     }
 
 
-def author_reward(author: str, permlink: str, hbd: str, hive: str, vests: str) -> tuple[int, dict]:
+def author_reward(
+    author: str, permlink: str, hbd: str, hive: str, vests: str, *, pixa_names: bool = False
+) -> tuple[int, dict]:
+    """pixa_names: pxs_payout / pixa_payout, as a Pixa node with hardfork 32 code names them."""
     return AUTHOR_REWARD, {
         'author': author,
         'permlink': permlink,
-        'hbd_payout': nai(hbd, STABLE_NAI),
-        'hive_payout': nai(hive, LIQUID_NAI),
+        'pxs_payout' if pixa_names else 'hbd_payout': nai(hbd, STABLE_NAI),
+        'pixa_payout' if pixa_names else 'hive_payout': nai(hive, LIQUID_NAI),
         'vesting_payout': nai(vests, VESTS_NAI),
         'curators_vesting_payout': nai('0', VESTS_NAI),
         'payout_must_be_claimed': True,
+    }
+
+
+# ----------------------------------------------------------------- NFTs
+# nft_operation carries one action; a purchase is followed by the virtual operations
+# nft_sold (always) and nft_royalty (when the creator is paid a royalty).
+NFT_NEVER = '2106-02-07T06:28:15'  # time_point_sec::maximum(): an offer that does not expire
+
+
+def _nft(account: str, action: str, **value: Any) -> tuple[int, dict]:
+    return NFT, {
+        'account': account,
+        'action': {'type': f'nft_{action}', 'value': {**value, 'extensions': []}},
+        'extensions': [],
+    }
+
+
+def nft_mint(
+    account: str, permlink: str, royalty: int = 0, license: str = '', editions: int = 1, fee: str | None = None
+) -> tuple[int, dict]:
+    """The fee is 1.000 PXS per copy unless given."""
+    return _nft(
+        account,
+        'mint',
+        permlink=permlink,
+        editions=editions,
+        royalty=royalty,
+        license=license,
+        fee=nai(fee if fee is not None else f'{editions}.000', STABLE_NAI),
+    )
+
+
+def nft_list(
+    account: str, author: str, permlink: str, price: str, expiration: str = NFT_NEVER, edition: int = 1
+) -> tuple[int, dict]:
+    """An offer, in PXS."""
+    return _nft(
+        account,
+        'list',
+        author=author,
+        permlink=permlink,
+        edition=edition,
+        price=nai(price, STABLE_NAI),
+        expiration=expiration,
+    )
+
+
+def nft_unlist(account: str, author: str, permlink: str, edition: int = 1) -> tuple[int, dict]:
+    return _nft(account, 'unlist', author=author, permlink=permlink, edition=edition)
+
+
+def nft_buy(account: str, author: str, permlink: str, price: str, edition: int = 1) -> tuple[int, dict]:
+    return _nft(account, 'buy', author=author, permlink=permlink, edition=edition, price=nai(price, STABLE_NAI))
+
+
+def nft_transfer(account: str, author: str, permlink: str, to: str, edition: int = 1) -> tuple[int, dict]:
+    """A gift, without payment or royalty; to the null account it burns the copy."""
+    return _nft(account, 'transfer', author=author, permlink=permlink, edition=edition, to=to)
+
+
+def nft_sold(
+    seller: str, buyer: str, author: str, permlink: str, price: str, royalty: str = '0.000', edition: int = 1
+) -> tuple[int, dict]:
+    """Price and royalty in PXS."""
+    return NFT_SOLD, {
+        'seller': seller,
+        'buyer': buyer,
+        'author': author,
+        'permlink': permlink,
+        'edition': edition,
+        'price': nai(price, STABLE_NAI),
+        'royalty': nai(royalty, STABLE_NAI),
+    }
+
+
+def nft_royalty(
+    creator: str, seller: str, buyer: str, permlink: str, royalty: str, edition: int = 1
+) -> tuple[int, dict]:
+    return NFT_ROYALTY, {
+        'creator': creator,
+        'seller': seller,
+        'buyer': buyer,
+        'permlink': permlink,
+        'edition': edition,
+        'royalty': nai(royalty, STABLE_NAI),
     }
 
 
