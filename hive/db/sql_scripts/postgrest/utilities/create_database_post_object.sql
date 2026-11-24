@@ -66,6 +66,9 @@ BEGIN
     _result = jsonb_set(_result, '{net_rshares}', hivemind_app.json_stringify_numeric(_row.rshares));
   END IF;
 
+  -- Pixamind: whether the post is minted as an NFT (pixamind/sql/runtime/55_nft.sql)
+  _result = _result || jsonb_build_object('nft_minted', pixamind.nft_minted(_row.author, _row.permlink));
+
   RETURN _result;
 END
 $function$

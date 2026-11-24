@@ -6,6 +6,7 @@ work with `pixamind sync`, `hive sync` and the docker entrypoint alike:
     --pixamind-events / PIXAMIND_EVENTS                         event outbox (default off)
     --pixamind-events-retention-days / PIXAMIND_EVENTS_RETENTION_DAYS (default 30, 0 = forever)
     --pixamind-promotions / PIXAMIND_PROMOTIONS                 promoted posts (default on)
+    --pixamind-nfts / PIXAMIND_NFTS                             native NFTs (default on)
     --pixamind-telemetry / PIXAMIND_TELEMETRY                   per-batch telemetry (default on)
     --pixamind-feed-cache / PIXAMIND_FEED_CACHE                 shared feeds cache (default on)
     --pixamind-post-history / PIXAMIND_POST_HISTORY             every version of posts and comments (default on)
@@ -44,6 +45,13 @@ def add_arguments(add) -> None:
         help='index paid post promotions (transfers to @null) for the promoted feed',
     )
     add(
+        '--pixamind-nfts',
+        type=strtobool,
+        env_var='PIXAMIND_NFTS',
+        default=True,
+        help='index the native NFTs of the chain (nft_operation) for the pixamind_nft API',
+    )
+    add(
         '--pixamind-telemetry',
         type=strtobool,
         env_var='PIXAMIND_TELEMETRY',
@@ -71,6 +79,7 @@ class PixamindSettings:
     events: bool = False
     events_retention_days: int = 30
     promotions: bool = True
+    nfts: bool = True
     telemetry: bool = True
     feed_cache: bool = True
     post_history: bool = True
@@ -93,6 +102,7 @@ class PixamindSettings:
             events=bool(get('pixamind_events', cls.events)),
             events_retention_days=int(get('pixamind_events_retention_days', cls.events_retention_days)),
             promotions=bool(get('pixamind_promotions', cls.promotions)),
+            nfts=bool(get('pixamind_nfts', cls.nfts)),
             telemetry=bool(get('pixamind_telemetry', cls.telemetry)),
             feed_cache=bool(get('pixamind_feed_cache', cls.feed_cache)),
             post_history=bool(get('pixamind_post_history', cls.post_history)),

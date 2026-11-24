@@ -18,16 +18,31 @@ stable token for it.
 3. Pixamind records the payment and adds it to the post's promoted total.
 4. The post appears in the promoted feed, ranked by total, until its payout.
 
-Rules (as in Steem's hivemind): only the stable token counts (PXS, NAI `@@000000013`);
-the memo must be exactly `@author/permlink`; the post must exist (payments for missing
-posts are recorded but rank nothing); paid-out posts leave the feed. Payments are never
-refunded — the funds are burned.
+Rules (Steem's, as Hivemind applied them until 2025):
+
+| Rule | Value |
+|---|---|
+| Operation | `transfer` only; a recurrent transfer or a savings withdrawal to `null` burns without promoting |
+| Recipient | `null` |
+| Asset | PXS only (NAI `@@000000013`); PIXA sent to `null` burns without promoting |
+| Memo | exactly `@author/permlink`: nothing before or after it, not even a space |
+| Target | a root post, not deleted, created in that block or earlier (the rule Hivemind applies to votes, so a batch of 1,000 blocks counts a burn as block-by-block processing does). A reply cannot be promoted |
+| Amount | any amount from 0.001 PXS; burns from any account add up |
+| Listed | while the post awaits its payout, 7 days from posting; it keeps its `promoted` total afterwards |
+| Order | promoted total, highest first; on a tie, the newest post first |
+| Scope | all posts, a tag, a community, or the communities the observer subscribes to (`tag: "my"`) |
+
+A burn that matches no such post (a reply, a post created later, a missing post) is
+recorded in `pixamind.post_promotions` with no post and ranks nothing. Payments are
+never refunded — the funds are burned.
 
 ## Reading it
 
 | Method | |
 |---|---|
-| `bridge.get_ranked_posts` `{"sort": "promoted", "tag": …, "observer": …}` | the feed, bridge post objects with `"promoted": "1.750 PXS"`; `tag` can be a tag, a community (`portal-…`) or empty |
+| `bridge.get_ranked_posts` `{"sort": "promoted", "tag": …, "observer": …}` | the feed, bridge post objects with `"promoted": "1.750 PXS"`; `tag` can be a tag, a community (`portal-…`), `my` (with an observer) or empty |
+| any bridge or condenser post | `"promoted"`: the total burned for it, `"0.000 PXS"` when none |
+| `pixamind_content.get_content_metadata` | `promoted` when something was burned for the post |
 | `condenser_api.get_discussions_by_promoted` | the same feed for condenser-style clients |
 | `pixamind_feed.get_promoted_posts` | alias of the bridge call |
 | `pixamind_feed.get_promotions` `{"author", "permlink"}` / `{"sender"}` | payments behind a post / spending of an account |

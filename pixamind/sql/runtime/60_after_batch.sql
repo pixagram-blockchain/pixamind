@@ -7,9 +7,9 @@
 -- and the batch carries on. Pixamind extensions never stop the social indexer.
 --
 -- _options (all optional):
---   {"promotions": true, "events": false, "events_min_block": 0,
+--   {"promotions": true, "nfts": true, "events": false, "events_min_block": 0,
 --    "events_keep_blocks": 864000, "telemetry": true}
--- Returns a summary, e.g. {"promotions": 1, "events": 42, "failures": 0}.
+-- Returns a summary, e.g. {"promotions": 1, "nfts": 3, "events": 42, "failures": 0}.
 
 CREATE OR REPLACE FUNCTION pixamind.after_batch(
     _mode TEXT, _first INT, _last INT, _seconds REAL, _phases JSONB, _options JSONB DEFAULT '{}'
@@ -22,6 +22,7 @@ DECLARE
   _n INT;
   _events BOOLEAN := COALESCE((_options->>'events')::BOOLEAN, FALSE);
   _promotions BOOLEAN := COALESCE((_options->>'promotions')::BOOLEAN, TRUE);
+  _nfts BOOLEAN := COALESCE((_options->>'nfts')::BOOLEAN, TRUE);
   _telemetry BOOLEAN := COALESCE((_options->>'telemetry')::BOOLEAN, TRUE);
   _min_block INT := COALESCE((_options->>'events_min_block')::INT, 0);
   _keep_blocks INT := COALESCE((_options->>'events_keep_blocks')::INT, 0);
@@ -37,11 +38,25 @@ BEGIN
     END;
   END IF;
 
+  IF _nfts THEN
+    BEGIN
+      _n := pixamind.process_nfts(_first, _last);
+      _summary := _summary || jsonb_build_object('nfts', _n);
+      PERFORM pixamind.resolve_failures('nfts', _first, _last);
+    EXCEPTION WHEN OTHERS THEN
+      PERFORM pixamind.record_failure('nfts', _first, _last, SQLSTATE, SQLERRM);
+      _failures := _failures + 1;
+    END;
+  END IF;
+
   IF _events THEN
     BEGIN
       _n := pixamind.emit_events(_first, _last, _min_block, 'staging');
       IF _promotions THEN
         _n := _n + pixamind.emit_promotion_events(_first, _last, _min_block);
+      END IF;
+      IF _nfts THEN
+        _n := _n + pixamind.emit_nft_events(_first, _last, _min_block);
       END IF;
       _summary := _summary || jsonb_build_object('events', _n);
       PERFORM pixamind.resolve_failures('events', _first, _last);

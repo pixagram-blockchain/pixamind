@@ -16,7 +16,8 @@ RETURNS TEXT[] LANGUAGE sql IMMUTABLE AS
 $$
   SELECT ARRAY['accounts', 'posts', 'post_data', 'post_tags', 'votes', 'follows', 'muted', 'blacklisted',
                'follow_muted', 'follow_blacklisted', 'reblogs', 'feed_cache', 'communities', 'roles',
-               'subscriptions', 'mentions', 'notifications', 'events', 'promotions', 'promoted_posts']
+               'subscriptions', 'mentions', 'notifications', 'events', 'promotions', 'promoted_posts',
+               'nft_events', 'nfts', 'nft_editions']
 $$;
 
 -- SQL text of a projection: one TEXT column "r" per row.
@@ -127,6 +128,24 @@ BEGIN
       'WITH pk AS (' || _pk || ')
        SELECT concat_ws(''|'', k.k, p.promoted, p.last_promoted_at, p.last_block) AS r
        FROM pixamind.promoted_posts p JOIN pk k ON k.id = p.post_id'
+    WHEN 'nft_events' THEN
+      'SELECT concat_ws(''|'', e.op_id, e.block_num, e.created_at, e.type, e.author, e.permlink, e.edition, e.account,
+                        COALESCE(e.counterparty, ''''), COALESCE(e.price::TEXT, ''''), COALESCE(e.royalty::TEXT, ''''),
+                        COALESCE(e.fee::TEXT, ''''), COALESCE(e.expiration::TEXT, ''''), COALESCE(e.editions::TEXT, ''''),
+                        COALESCE(e.royalty_bps::TEXT, ''''), md5(COALESCE(e.license, '''')),
+                        COALESCE(e.license_sha256, '''')) AS r
+       FROM pixamind.nft_events e'
+    WHEN 'nfts' THEN
+      'SELECT concat_ws(''|'', n.author, n.permlink, n.post_id IS NOT NULL, n.mint_op_id, n.mint_block, n.minted_at,
+                        n.editions, n.royalty_bps, n.license_size, n.license_sha256, n.mint_fee) AS r
+       FROM pixamind.nfts n'
+    WHEN 'nft_editions' THEN
+      'SELECT concat_ws(''|'', e.author, e.permlink, e.edition, e.owner, e.acquired_op_id, e.acquired_at,
+                        COALESCE(e.price::TEXT, ''''), COALESCE(e.expiration::TEXT, ''''),
+                        COALESCE(e.listed_op_id::TEXT, ''''), e.sales, e.volume, e.royalties,
+                        COALESCE(e.last_sale_op_id::TEXT, ''''), COALESCE(e.last_sale_price::TEXT, ''''),
+                        COALESCE(e.last_sale_at::TEXT, '''')) AS r
+       FROM pixamind.nft_editions e'
   END;
 END
 $$;

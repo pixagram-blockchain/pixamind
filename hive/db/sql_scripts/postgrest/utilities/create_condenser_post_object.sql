@@ -107,6 +107,11 @@ BEGIN
     END IF;
   END IF;
 
+  -- Pixamind: whether the post is minted as an NFT (pixamind/sql/runtime/55_nft.sql)
+  _result = _result || jsonb_build_object('nft_minted', pixamind.nft_minted(_row.author, _row.permlink));
+  -- Pixamind: what was burned to promote the post (pixamind/sql/runtime/50_promotions.sql)
+  _result = _result || jsonb_build_object('promoted', pixamind.post_promoted(_row.id));
+
   RETURN _result;
 END
 $function$

@@ -3,12 +3,15 @@
 --   pixamind_api.get_info                   node, schema, chain and feature description
 --   pixamind_api.get_metrics                indexer lag, throughput, block->API latency, failures
 --   pixamind_api.get_events                 the social event outbox, cursor-paged
---   pixamind_content.get_content_metadata   artwork/post metadata (format, size, licence, AI disclosure)
+--   pixamind_content.get_content_metadata   artwork/post metadata (format, size, licence, AI disclosure),
+--                                           with the promoted total, the number of versions and the NFT
 --   pixamind_content.get_post_history       every version of a post or comment (75_post_history.sql)
 --   pixamind_graph.get_mutual_follows       accounts an account follows that follow it back
 --   pixamind_graph.get_relationships        one observer against up to 100 accounts, in one call
 --   pixamind_feed.get_promoted_posts        the promoted feed (same as bridge.get_ranked_posts sort=promoted)
 --   pixamind_feed.get_promotions            promotion payments of a post or of a sender
+--   pixamind_nft.*                          native NFTs: get_nfts, list_editions, list_created, list_owned,
+--                                           list_market, get_history, get_license (defined in 55_nft.sql)
 --
 -- Requests arrive through hivemind_endpoints.home -> hivemind_postgrest_utilities.dispatch,
 -- so errors use the same JSON-RPC error objects as the inherited APIs.
@@ -62,7 +65,8 @@ RETURNS JSONB LANGUAGE sql IMMUTABLE AS
 $$
   SELECT '["vote", "post_created", "post_updated", "comment_created", "comment_updated", "post_deleted",
            "follow", "reblog", "reblog_deleted", "community", "account_created", "account_updated",
-           "author_reward", "promotion"]'::JSONB
+           "author_reward", "promotion",
+           "nft_minted", "nft_listed", "nft_unlisted", "nft_sold", "nft_transferred", "nft_burned"]'::JSONB
 $$;
 
 -- ------------------------------------------------------------ pixamind_api
@@ -90,13 +94,14 @@ BEGIN
       'events', pixamind.get_setting('events', 'false')::BOOLEAN,
       'events_keep_blocks', pixamind.get_setting('events_keep_blocks', '0')::INT,
       'promotions', pixamind.get_setting('promotions', 'true')::BOOLEAN,
+      'nfts', pixamind.get_setting('nfts', 'true')::BOOLEAN,
       'telemetry', pixamind.get_setting('telemetry', 'true')::BOOLEAN,
       'feed_cache', pixamind.get_setting('feed_cache', 'false')::BOOLEAN,
       'post_history', pixamind.get_setting('post_history', 'false')::BOOLEAN,
       'post_history_backfilled', pixamind.get_setting('post_history_backfilled', 'false')::BOOLEAN),
     'feed_cache', pixamind.feed_cache_state(),
     'event_types', pixamind.event_types(),
-    'namespaces', '["pixamind_api", "pixamind_content", "pixamind_graph", "pixamind_feed"]'::JSONB
+    'namespaces', '["pixamind_api", "pixamind_content", "pixamind_graph", "pixamind_feed", "pixamind_nft"]'::JSONB
   );
 END
 $$;
@@ -308,7 +313,13 @@ $$
            'created', to_char(hp.created_at, 'YYYY-MM-DD"T"HH24:MI:SS'),
            'updated', to_char(hp.updated_at, 'YYYY-MM-DD"T"HH24:MI:SS'),
            'title', NULLIF(d.title, ''),
-           'content', pixamind.content_metadata(d.json, left(d.body, 160), length(d.body))))
+           'content', pixamind.content_metadata(d.json, left(d.body, 160), length(d.body)),
+           -- present only when something was burned to promote it (50_promotions.sql)
+           'promoted', (SELECT pixamind.stable_amount_text(pp.promoted) FROM pixamind.promoted_posts pp WHERE pp.post_id = hp.id),
+           -- present only when its history is recorded: how many versions (75_post_history.sql)
+           'versions', (SELECT NULLIF(count(*), 0) FROM pixamind.post_versions v WHERE v.post_id = hp.id),
+           -- present only when the post is minted: terms and market summary (55_nft.sql)
+           'nft', pixamind.nft_object(ha.name, hpd.permlink, pixamind.nft_now())))
   FROM hivemind_app.hive_posts hp
   JOIN hivemind_app.hive_accounts ha ON ha.id = hp.author_id
   JOIN hivemind_app.hive_permlink_data hpd ON hpd.id = hp.permlink_id
@@ -428,9 +439,7 @@ CREATE OR REPLACE FUNCTION pixamind.bridge_get_promoted_posts(
 RETURNS JSONB LANGUAGE plpgsql STABLE AS
 $$
 BEGIN
-  IF _tag = 'my' THEN
-    PERFORM hivemind_postgrest_utilities.raise_parameter_validation_exception('promoted does not support tag `my`');
-  END IF;
+  -- tag 'my' (the observer's communities) arrives with an observer: the bridge requires one for it
   RETURN pixamind.get_promoted_ranked_posts(_post_id, _observer_id, _limit, 0, _tag, True, _muted_reasons_filter_mask);
 END
 $$;
@@ -541,6 +550,13 @@ BEGIN
     WHEN 'pixamind_graph.get_relationships' THEN RETURN pixamind.api_get_relationships(_params);
     WHEN 'pixamind_feed.get_promoted_posts' THEN RETURN pixamind.api_get_promoted_posts(_params);
     WHEN 'pixamind_feed.get_promotions' THEN RETURN pixamind.api_get_promotions(_params);
+    WHEN 'pixamind_nft.get_nfts' THEN RETURN pixamind.api_nft_get_nfts(_params);
+    WHEN 'pixamind_nft.list_editions' THEN RETURN pixamind.api_nft_list_editions(_params);
+    WHEN 'pixamind_nft.list_created' THEN RETURN pixamind.api_nft_list_created(_params);
+    WHEN 'pixamind_nft.list_owned' THEN RETURN pixamind.api_nft_list_owned(_params);
+    WHEN 'pixamind_nft.list_market' THEN RETURN pixamind.api_nft_list_market(_params);
+    WHEN 'pixamind_nft.get_history' THEN RETURN pixamind.api_nft_get_history(_params);
+    WHEN 'pixamind_nft.get_license' THEN RETURN pixamind.api_nft_get_license(_params);
     ELSE
       RAISE EXCEPTION '%', hivemind_postgrest_utilities.raise_method_not_found_exception(_api_type || '.' || _method_type);
   END CASE;
