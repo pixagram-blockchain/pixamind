@@ -39,7 +39,7 @@ BEGIN
     'root_title', _row.root_title,
     'beneficiaries', _row.beneficiaries,
     'max_accepted_payout', _row.max_accepted_payout,
-    'percent_hbd', _row.percent_hbd,
+    '{{PERCENT_HBD_FIELD}}', _row.percent_hbd, -- Pixamind: percent_pxs on Pixa
     'active_votes', hivemind_postgrest_utilities.list_votes(_observer_id, _row.id, /* in python code it was hardcoded */ 1000,
                     'get_votes_for_posts'::hivemind_postgrest_utilities.list_votes_case, (SELECT CASE
                                                                                     WHEN _content_additions THEN 'active_votes'::hivemind_postgrest_utilities.vote_presentation

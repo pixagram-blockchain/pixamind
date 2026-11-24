@@ -777,8 +777,9 @@ BEGIN
             -- COMMENT_PAYOUT_UPDATE (type 61) - last occurrence
             (array_agg(s.block_date ORDER BY s.id DESC) FILTER (WHERE s.op_type_id = 61))[1] AS cpu_payout_date,
             -- AUTHOR_REWARD (type 51) - last occurrence
-            (array_agg((s.val->'hive_payout'->>'amount')::BIGINT ORDER BY s.id DESC) FILTER (WHERE s.op_type_id = 51))[1] AS author_rewards_hive,
-            (array_agg((s.val->'hbd_payout'->>'amount')::BIGINT ORDER BY s.id DESC) FILTER (WHERE s.op_type_id = 51))[1] AS author_rewards_hbd,
+            -- Pixamind: pixa_payout / pxs_payout from a Pixa node with hardfork 32 code, hive_payout / hbd_payout before
+            (array_agg((COALESCE(s.val->'pixa_payout', s.val->'hive_payout')->>'amount')::BIGINT ORDER BY s.id DESC) FILTER (WHERE s.op_type_id = 51))[1] AS author_rewards_hive,
+            (array_agg((COALESCE(s.val->'pxs_payout', s.val->'hbd_payout')->>'amount')::BIGINT ORDER BY s.id DESC) FILTER (WHERE s.op_type_id = 51))[1] AS author_rewards_hbd,
             (array_agg((s.val->'vesting_payout'->>'amount')::BIGINT ORDER BY s.id DESC) FILTER (WHERE s.op_type_id = 51))[1] AS author_rewards_vests,
             -- COMMENT_REWARD (type 53) - last occurrence
             (array_agg((s.val->>'author_rewards')::BIGINT ORDER BY s.id DESC) FILTER (WHERE s.op_type_id = 53))[1] AS author_rewards,
@@ -1225,7 +1226,7 @@ BEGIN
             s.val->>'author' AS author,
             s.val->>'permlink' AS permlink,
             COALESCE(hivemind_app.legacy_amount(s.val->'max_accepted_payout'), '1000000.000 {{HBD_SYMBOL}}') AS max_accepted_payout,
-            COALESCE((s.val->>'percent_hbd')::INT, 10000) AS percent_hbd,
+            COALESCE((s.val->>'percent_pxs')::INT, (s.val->>'percent_hbd')::INT, 10000) AS percent_hbd, -- Pixamind: Pixa's name, then Hive's
             COALESCE((s.val->>'allow_votes')::BOOLEAN, TRUE) AS allow_votes,
             COALESCE((s.val->>'allow_curation_rewards')::BOOLEAN, TRUE) AS allow_curation_rewards,
             COALESCE(
@@ -1498,7 +1499,7 @@ BEGIN
                 s.val->>'author' AS author,
                 s.val->>'permlink' AS permlink,
                 COALESCE(hivemind_app.legacy_amount(s.val->'max_accepted_payout'), '1000000.000 {{HBD_SYMBOL}}') AS max_accepted_payout,
-                COALESCE((s.val->>'percent_hbd')::INT, 10000) AS percent_hbd,
+                COALESCE((s.val->>'percent_pxs')::INT, (s.val->>'percent_hbd')::INT, 10000) AS percent_hbd, -- Pixamind: Pixa's name, then Hive's
                 COALESCE((s.val->>'allow_votes')::BOOLEAN, TRUE) AS allow_votes,
                 COALESCE((s.val->>'allow_curation_rewards')::BOOLEAN, TRUE) AS allow_curation_rewards,
                 COALESCE(

@@ -38,8 +38,30 @@ REST endpoints (PostgREST, OpenAPI described in `hive/db/sql_scripts/endpoints`)
 | Every post object of the `bridge`, `condenser_api`, `tags_api` and `database_api` methods has `nft_minted` (true or false) | native NFTs, chain hardfork 32 ([NFT.md](NFT.md)) |
 | Every post object of the `bridge`, `condenser_api` and `tags_api` methods has `promoted` (`"0.000 PXS"` when nothing was burned for it), as on Steem | promoted posts ([PROMOTED_POSTS.md](PROMOTED_POSTS.md)) |
 | `bridge.get_ranked_posts` with `sort: "promoted"` takes `tag: "my"` (the observer's communities) | same scopes as the other sorts |
+| On Pixa, every post object names the share of the payout paid in PXS `percent_pxs` (Hivemind: `percent_hbd`) | the name Pixa's node uses ([below](#field-names-on-pixa)) |
 
 `pixamind apidiff` reports exactly these when a Pixamind node is compared with the old one.
+
+### Field names on Pixa
+
+From hardfork 32 code on (pixacore 1.32.0), Pixa's node names the PXS and PIXA fields of its
+operations after Pixa: `percent_pxs`, `pxs_payout`, `pixa_payout`, `reward_pixa`, and so on.
+HAF writes an operation's JSON with the names of the node code it is built from, so the same
+block reads `percent_hbd` through an earlier HAF build and `percent_pxs` through a new one.
+The indexer reads both names (`massive_sync.sql` for posts, the events projection for
+rewards), so a database synced across the upgrade needs nothing.
+
+What Pixamind answers does not depend on the HAF build:
+
+| Where | Name |
+|---|---|
+| Post objects of `bridge`, `condenser_api`, `tags_api`, `database_api` | `percent_pxs` with `PIXAMIND_CHAIN=pixa`, `percent_hbd` with `PIXAMIND_CHAIN=hive` (`PIXAMIND_PERCENT_HBD_FIELD` sets it) |
+| Column `hivemind_app.hive_posts.percent_hbd` | unchanged (compatibility) |
+| `author_reward` events | v1 keys unchanged: `hbd_payout`, `hive_payout` ([EVENTS.md](EVENTS.md)) |
+
+To compare with a node that answers `percent_hbd`, ignore both names at the depths the methods
+use, for example `--ignore result.percent_hbd --ignore result.percent_pxs --ignore 'result.*.percent_hbd'
+--ignore 'result.*.percent_pxs'`.
 
 ## `pixamind_api`
 

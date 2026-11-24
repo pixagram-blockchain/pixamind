@@ -41,7 +41,7 @@ need, ask the API (e.g. `bridge.get_post`) for the current state.
 | `community` | signer → `params.account` | `action` (`subscribe`, `unsubscribe`, `setRole`, `setUserTitle`, `mutePost`, `unmutePost`, `pinPost`, `unpinPost`, `flagPost`, `updateProps`), `community`, the operation's other parameters. Permissions are enforced by hivemind; this is the request as sent. |
 | `account_created` | new account → creator | `account`, `creator` |
 | `account_updated` | account | `account`, `metadata`, `posting_metadata` (which of the two changed) |
-| `author_reward` | author | `author`, `permlink`, `hbd_payout`, `hive_payout`, `vesting_payout` ("0.100 PXS") |
+| `author_reward` | author | `author`, `permlink`, `hbd_payout`, `hive_payout`, `vesting_payout` ("0.100 PXS"); v1 keys, read from the operation's `pxs_payout`/`pixa_payout` (pixacore 1.32.0) or `hbd_payout`/`hive_payout` |
 | `promotion` | sender → author | `sender`, `author`, `permlink`, `amount`, `post_exists` |
 | `nft_minted` | minter | `nft_id`, `author`, `permlink`, `editions`, `royalty`, `license_size`, `license_sha256`, `fee` ([NFT.md](NFT.md)) |
 | `nft_listed`, `nft_unlisted` | owner → creator | `nft_id`, `account`, `author`, `permlink`, `edition`; listed also `price` and, when set, `expiration`. Edition 0 (`@author/permlink/0`): the creator offers the reserve or withdraws that offer |

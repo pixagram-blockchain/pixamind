@@ -80,7 +80,10 @@ def comment_options(
     *,
     max_accepted_payout: str = '1000000.000',
     beneficiaries: list[tuple[str, int]] | None = None,
+    percent: int = 10000,
+    pixa_names: bool = False,
 ) -> tuple[int, dict]:
+    """pixa_names: name the field percent_pxs, as a Pixa node with hardfork 32 code does (percent_hbd before)."""
     extensions = []
     if beneficiaries:
         extensions.append(
@@ -93,7 +96,7 @@ def comment_options(
         'author': author,
         'permlink': permlink,
         'max_accepted_payout': nai(max_accepted_payout),
-        'percent_hbd': 10000,
+        'percent_pxs' if pixa_names else 'percent_hbd': percent,
         'allow_votes': True,
         'allow_curation_rewards': True,
         'extensions': extensions,
@@ -157,12 +160,15 @@ def account_update2(account: str, posting_json_metadata: dict | None = None) -> 
     }
 
 
-def author_reward(author: str, permlink: str, hbd: str, hive: str, vests: str) -> tuple[int, dict]:
+def author_reward(
+    author: str, permlink: str, hbd: str, hive: str, vests: str, *, pixa_names: bool = False
+) -> tuple[int, dict]:
+    """pixa_names: pxs_payout / pixa_payout, as a Pixa node with hardfork 32 code names them."""
     return AUTHOR_REWARD, {
         'author': author,
         'permlink': permlink,
-        'hbd_payout': nai(hbd, STABLE_NAI),
-        'hive_payout': nai(hive, LIQUID_NAI),
+        'pxs_payout' if pixa_names else 'hbd_payout': nai(hbd, STABLE_NAI),
+        'pixa_payout' if pixa_names else 'hive_payout': nai(hive, LIQUID_NAI),
         'vesting_payout': nai(vests, VESTS_NAI),
         'curators_vesting_payout': nai('0', VESTS_NAI),
         'payout_must_be_claimed': True,

@@ -50,7 +50,7 @@ BEGIN
     'url', _row.url,
     'beneficiaries', _row.beneficiaries,
     'max_accepted_payout', _row.max_accepted_payout,
-    'percent_hbd', _row.percent_hbd,
+    '{{PERCENT_HBD_FIELD}}', _row.percent_hbd, -- Pixamind: percent_pxs on Pixa
     'json_metadata', _tmp_jsonb,
     'stats', jsonb_build_object(
               'hide', _row.is_hidden,

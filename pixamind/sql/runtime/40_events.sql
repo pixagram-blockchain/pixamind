@@ -200,8 +200,9 @@ rewards AS (
            s.val->>'author' AS account, NULL::TEXT AS target,
            jsonb_strip_nulls(jsonb_build_object(
                'author', s.val->>'author', 'permlink', s.val->>'permlink',
-               'hbd_payout', pixamind.nai_text(s.val->'hbd_payout'),
-               'hive_payout', pixamind.nai_text(s.val->'hive_payout'),
+               -- contract v1 keeps these keys; the operation names them pxs_payout / pixa_payout from hardfork 32 code on
+               'hbd_payout', pixamind.nai_text(COALESCE(s.val->'pxs_payout', s.val->'hbd_payout')),
+               'hive_payout', pixamind.nai_text(COALESCE(s.val->'pixa_payout', s.val->'hive_payout')),
                'vesting_payout', pixamind.nai_text(s.val->'vesting_payout'))) AS payload
     FROM src s
     WHERE s.op_type_id = 51
